@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
 import { z } from "zod";
 
 async function seedDatabase() {
@@ -146,8 +146,301 @@ export async function registerRoutes(
      res.json({ isFavorite });
   });
 
+  // Categories Route
+  app.get(api.categories.list.path, async (req, res) => {
+    const categories = await storage.getCategories();
+    res.json(categories);
+  });
+
+  // Playback Progress Routes
+  app.get(api.playback.recentlyPlayed.path, isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const recentlyPlayed = await storage.getRecentlyPlayed(userId, 10);
+    res.json(recentlyPlayed);
+  });
+
+  app.get(api.playback.getProgress.path, async (req: any, res) => {
+    if (!req.isAuthenticated()) {
+      return res.json({ progress: 0, currentTime: 0 });
+    }
+    const userId = req.user.claims.sub;
+    const bookId = Number(req.params.bookId);
+    const progress = await storage.getPlaybackProgress(userId, bookId);
+    res.json({
+      progress: progress?.progress || 0,
+      currentTime: progress?.currentTime || 0,
+    });
+  });
+
+  app.post(api.playback.saveProgress.path, isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const bookId = Number(req.params.bookId);
+    const { progress, currentTime } = req.body;
+    
+    if (typeof progress !== 'number' || typeof currentTime !== 'number') {
+      return res.status(400).json({ message: "Invalid progress data" });
+    }
+    
+    await storage.savePlaybackProgress(userId, bookId, progress, currentTime);
+    res.json({ success: true });
+  });
+
+  // ============= SUBSCRIPTION & LISTENING ROUTES =============
+
+  // Get subscription plans
+  app.get('/api/subscription/plans', async (req, res) => {
+    const plans = await storage.getSubscriptionPlans();
+    res.json(plans);
+  });
+
+  // Check listening status (limits)
+  app.get('/api/listening/status', async (req: any, res) => {
+    const userId = req.isAuthenticated() ? req.user.claims.sub : undefined;
+    const visitorId = req.query.visitorId as string;
+    
+    const status = await storage.checkListeningStatus(userId, visitorId);
+    res.json(status);
+  });
+
+  // Record listening (when user plays a book)
+  app.post('/api/listening/record', async (req: any, res) => {
+    const userId = req.isAuthenticated() ? req.user.claims.sub : undefined;
+    const { bookId, visitorId } = req.body;
+    
+    if (!bookId) {
+      return res.status(400).json({ message: "Book ID is required" });
+    }
+
+    // Check if user can listen
+    const status = await storage.checkListeningStatus(userId, visitorId);
+    if (!status.canListen) {
+      return res.status(403).json({ 
+        message: "Listening limit reached",
+        status 
+      });
+    }
+
+    await storage.recordListening(bookId, userId, visitorId);
+    
+    // Return updated status
+    const updatedStatus = await storage.checkListeningStatus(userId, visitorId);
+    res.json({ success: true, status: updatedStatus });
+  });
+
+  // Get active subscription for logged in user
+  app.get('/api/subscription/active', isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const subscription = await storage.getActiveSubscription(userId);
+    res.json(subscription || null);
+  });
+
+  // Create payment transaction (generate Xendit invoice)
+  app.post('/api/payment/create', isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
+    const { planId } = req.body;
+
+    if (!planId) {
+      return res.status(400).json({ message: "Plan ID is required" });
+    }
+
+    const plan = await storage.getSubscriptionPlan(planId);
+    if (!plan) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    try {
+      // Create Xendit invoice
+      const xenditSecretKey = process.env.XENDIT_SECRET_KEY;
+      if (!xenditSecretKey) {
+        throw new Error("Xendit API key not configured");
+      }
+
+      const externalId = `storify-${userId}-${Date.now()}`;
+      const expiryDate = new Date();
+      expiryDate.setHours(expiryDate.getHours() + 24); // 24 hours expiry
+
+      const xenditPayload = {
+        external_id: externalId,
+        amount: plan.price,
+        description: `Storify Premium - ${plan.name}`,
+        invoice_duration: 86400, // 24 hours in seconds
+        customer: {
+          given_names: req.user.username || "User",
+          email: req.user.email || `${req.user.username}@storify.app`,
+        },
+        customer_notification_preference: {
+          invoice_created: ["email"],
+          invoice_reminder: ["email"],
+          invoice_paid: ["email"],
+        },
+        success_redirect_url: `${process.env.APP_URL || 'http://localhost:5000'}/subscription?payment=success`,
+        failure_redirect_url: `${process.env.APP_URL || 'http://localhost:5000'}/subscription?payment=failed`,
+        currency: "IDR",
+        payment_methods: ["QRIS", "EWALLET", "VIRTUAL_ACCOUNT", "RETAIL_OUTLET"],
+      };
+
+      const xenditResponse = await fetch("https://api.xendit.co/v2/invoices", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Basic ${Buffer.from(xenditSecretKey + ":").toString("base64")}`,
+        },
+        body: JSON.stringify(xenditPayload),
+      });
+
+      if (!xenditResponse.ok) {
+        const error = await xenditResponse.json();
+        throw new Error(error.message || "Failed to create Xendit invoice");
+      }
+
+      const xenditData = await xenditResponse.json();
+
+      // Save transaction to database
+      const transaction = await storage.createPaymentTransaction(
+        userId, 
+        planId, 
+        plan.price,
+        {
+          xenditInvoiceId: xenditData.id,
+          xenditInvoiceUrl: xenditData.invoice_url,
+          xenditExternalId: externalId,
+          expiredAt: new Date(xenditData.expiry_date),
+        }
+      );
+
+      res.json(transaction);
+    } catch (error: any) {
+      console.error("Error creating Xendit invoice:", error);
+      res.status(500).json({ message: error.message || "Failed to create payment" });
+    }
+  });
+
+  // Update payment transaction (webhook from Xendit or manual update)
+  app.post('/api/payment/:transactionId/update', isAuthenticated, async (req: any, res) => {
+    const transactionId = Number(req.params.transactionId);
+    const { status, xenditPaymentMethod, xenditPaymentChannel, paymentCustomerName } = req.body;
+
+    const transaction = await storage.getPaymentTransaction(transactionId);
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+
+    const updatedData: any = {};
+    
+    if (status === 'paid') {
+      updatedData.status = 'paid';
+      updatedData.paidAt = new Date();
+      if (xenditPaymentMethod) updatedData.xenditPaymentMethod = xenditPaymentMethod;
+      if (xenditPaymentChannel) updatedData.xenditPaymentChannel = xenditPaymentChannel;
+      if (paymentCustomerName) updatedData.paymentCustomerName = paymentCustomerName;
+
+      // Create subscription when payment is successful
+      await storage.createSubscription(transaction.userId, transaction.planId, transactionId.toString());
+    } else if (status) {
+      updatedData.status = status;
+    }
+
+    const updated = await storage.updatePaymentTransaction(transactionId, updatedData);
+    res.json(updated);
+  });
+
+  // Get payment transaction status
+  app.get('/api/payment/:transactionId', isAuthenticated, async (req: any, res) => {
+    const transactionId = Number(req.params.transactionId);
+    const transaction = await storage.getPaymentTransaction(transactionId);
+    
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+    
+    res.json(transaction);
+  });
+
+  // Xendit webhook endpoint (no auth required, verified by callback token)
+  app.post('/api/webhook/xendit', async (req, res) => {
+    try {
+      // Verify webhook token
+      const webhookToken = req.headers['x-callback-token'];
+      if (webhookToken !== process.env.XENDIT_WEBHOOK_TOKEN) {
+        return res.status(401).json({ message: "Invalid webhook token" });
+      }
+
+      const { external_id, status, payment_method, payment_channel, paid_amount } = req.body;
+
+      // Find transaction by external_id
+      const transaction = await storage.getPaymentTransactionByExternalId(external_id);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      // Update transaction based on Xendit status
+      const updatedData: any = {};
+      
+      if (status === 'PAID' || status === 'SETTLED') {
+        updatedData.status = 'paid';
+        updatedData.paidAt = new Date();
+        updatedData.xenditPaymentMethod = payment_method;
+        updatedData.xenditPaymentChannel = payment_channel;
+
+        // Create subscription when payment is successful
+        await storage.createSubscription(transaction.userId, transaction.planId, transaction.id.toString());
+      } else if (status === 'EXPIRED') {
+        updatedData.status = 'expired';
+      } else if (status === 'FAILED') {
+        updatedData.status = 'failed';
+      }
+
+      if (Object.keys(updatedData).length > 0) {
+        await storage.updatePaymentTransaction(transaction.id, updatedData);
+      }
+
+      res.json({ message: "Webhook processed" });
+    } catch (error: any) {
+      console.error("Error processing Xendit webhook:", error);
+      res.status(500).json({ message: error.message || "Webhook processing failed" });
+    }
+  });
+
   // Seed Data
   await seedDatabase();
+  
+  // Seed subscription plans if not exists
+  await seedSubscriptionPlans();
 
   return httpServer;
+}
+
+// Seed subscription plans
+async function seedSubscriptionPlans() {
+  const plans = await storage.getSubscriptionPlans();
+  if (plans.length === 0) {
+    console.log("Seeding subscription plans...");
+    const { db } = await import("./db");
+    const { subscriptionPlans } = await import("@shared/schema");
+    
+    await db.insert(subscriptionPlans).values([
+      {
+        name: "Mingguan",
+        price: 15000, // Rp 15.000
+        durationDays: 7,
+        description: "Akses unlimited selama 1 minggu",
+        isActive: true,
+      },
+      {
+        name: "Bulanan",
+        price: 49000, // Rp 49.000
+        durationDays: 30,
+        description: "Akses unlimited selama 1 bulan - BEST VALUE",
+        isActive: true,
+      },
+      {
+        name: "Tahunan",
+        price: 399000, // Rp 399.000
+        durationDays: 365,
+        description: "Akses unlimited selama 1 tahun - Hemat 32%",
+        isActive: true,
+      },
+    ]);
+    console.log("Subscription plans seeded!");
+  }
 }

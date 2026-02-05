@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AudioProvider } from "@/context/AudioContext";
 import { GlobalAudioPlayer } from "@/components/AudioPlayer";
+import { ListeningLimitModal } from "@/components/ListeningLimitModal";
 import { BottomNav } from "@/components/Navigation";
 
 import Home from "@/pages/Home";
@@ -11,6 +12,7 @@ import Explore from "@/pages/Explore";
 import BookDetail from "@/pages/BookDetail";
 import Favorites from "@/pages/Favorites";
 import Profile from "@/pages/Profile";
+import Subscription from "@/pages/Subscription";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +23,7 @@ function Router() {
       <Route path="/book/:id" component={BookDetail} />
       <Route path="/favorites" component={Favorites} />
       <Route path="/profile" component={Profile} />
+      <Route path="/subscription" component={Subscription} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -32,6 +35,7 @@ function App() {
       <AudioProvider>
         <Router />
         <GlobalAudioPlayer />
+        <ListeningLimitModal />
         <BottomNav />
         <Toaster />
       </AudioProvider>

@@ -6,13 +6,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-
-const CATEGORIES = ["Business", "Self-Help", "Fiction", "Science", "Biography", "History"];
+import { useQuery } from "@tanstack/react-query";
 
 export default function Explore() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
+  // Fetch categories from database
+  const { data: categories = [], isLoading: loadingCategories } = useQuery<string[]>({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await fetch('/api/categories');
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   const { data: books, isLoading } = useBooks({ 
     search: search || undefined,
     category: selectedCategory || undefined
@@ -55,19 +64,26 @@ export default function Explore() {
             >
               All
             </button>
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  cat === selectedCategory 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-secondary/50 text-foreground hover:bg-secondary"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            {loadingCategories ? (
+              // Loading skeleton for categories
+              Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-24 rounded-full flex-shrink-0" />
+              ))
+            ) : (
+              categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    cat === selectedCategory 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-secondary/50 text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))
+            )}
           </div>
         </div>
         <div className="h-px bg-border/50 mx-6" />

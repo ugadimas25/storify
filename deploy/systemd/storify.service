@@ -1,0 +1,34 @@
+[Unit]
+Description=Storify Insights Application
+Documentation=https://storify.global-compliance-system.com
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/storify
+ExecStart=/usr/bin/node /var/www/storify/dist/index.cjs
+Restart=on-failure
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=storify
+Environment=NODE_ENV=production
+Environment=PORT=5000
+EnvironmentFile=/var/www/storify/.env
+
+# Security Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/storify/logs
+ReadWritePaths=/var/www/storify/uploads
+
+# Resource Limits
+LimitNOFILE=65535
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

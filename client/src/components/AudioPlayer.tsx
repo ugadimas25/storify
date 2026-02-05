@@ -4,8 +4,16 @@ import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
+// Format seconds to mm:ss
+function formatTime(seconds: number): string {
+  if (!seconds || isNaN(seconds)) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 export function GlobalAudioPlayer() {
-  const { currentBook, isPlaying, progress, togglePlay, seek, closePlayer } = useAudio();
+  const { currentBook, isPlaying, progress, currentTime, duration, togglePlay, seek, skipForward, skipBackward, closePlayer } = useAudio();
 
   // If no book is playing, don't render anything
   if (!currentBook) return null;
@@ -41,7 +49,9 @@ export function GlobalAudioPlayer() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-bold truncate leading-tight">{currentBook.title}</h4>
-                <p className="text-xs text-muted-foreground truncate">{currentBook.author}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {formatTime(currentTime)} / {formatTime(duration)}
+                </p>
               </div>
 
               {/* Controls */}
@@ -49,10 +59,12 @@ export function GlobalAudioPlayer() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => seek(Math.max(0, progress - 5))}
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
+                  onClick={() => skipBackward(15)}
+                  title="Rewind 15 seconds"
                 >
                   <SkipBack className="w-4 h-4" />
+                  <span className="absolute -bottom-0.5 text-[8px] font-bold">15</span>
                 </Button>
 
                 <Button 
@@ -73,10 +85,12 @@ export function GlobalAudioPlayer() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => seek(Math.min(100, progress + 5))}
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
+                  onClick={() => skipForward(15)}
+                  title="Forward 15 seconds"
                 >
                   <SkipForward className="w-4 h-4" />
+                  <span className="absolute -bottom-0.5 text-[8px] font-bold">15</span>
                 </Button>
 
                 <Button 

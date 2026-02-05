@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { insertBookSchema, insertFavoriteSchema, books, favorites } from './schema';
+import { insertBookSchema, insertFavoriteSchema, books, favorites, playbackProgress, type Book, type InsertBook } from './schema';
+
+export type { Book, InsertBook };
 
 export const errorSchemas = {
   validation: z.object({
@@ -50,6 +52,15 @@ export const api = {
       },
     },
   },
+  categories: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/categories',
+      responses: {
+        200: z.array(z.string()),
+      },
+    },
+  },
   favorites: {
     list: {
       method: 'GET' as const,
@@ -75,6 +86,43 @@ export const api = {
         200: z.object({ isFavorite: z.boolean() }),
       }
     }
+  },
+  playback: {
+    getProgress: {
+      method: 'GET' as const,
+      path: '/api/playback/:bookId',
+      responses: {
+        200: z.object({
+          progress: z.number(),
+          currentTime: z.number(),
+        }),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    saveProgress: {
+      method: 'POST' as const,
+      path: '/api/playback/:bookId',
+      input: z.object({
+        progress: z.number().min(0).max(100),
+        currentTime: z.number().min(0),
+      }),
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    recentlyPlayed: {
+      method: 'GET' as const,
+      path: '/api/playback/recently-played',
+      responses: {
+        200: z.array(z.object({
+          ...z.custom<typeof books.$inferSelect>().shape,
+          progress: z.number(),
+          currentTime: z.number(),
+        })),
+        401: errorSchemas.unauthorized,
+      },
+    },
   },
 };
 
