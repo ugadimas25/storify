@@ -34,9 +34,12 @@ yum update -y
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 apt install -y nodejs
 
+# Update npm to latest version (required for package aliases)
+npm install -g npm@latest
+
 # Verify installation
 node --version  # Should show v20.x.x
-npm --version
+npm --version   # Should show v10.x.x or higher
 ```
 
 ### 1.4 Install PostgreSQL
@@ -120,7 +123,12 @@ scp -r ./Storify-Insights/* root@<IP_SERVER>:/var/www/storify/
 ### 3.3 Install Dependencies
 ```bash
 cd /var/www/storify
-npm install --production=false
+
+# Install ALL dependencies (including devDependencies)
+# Required for: building, database migrations, TypeScript compilation
+npm ci
+
+# Note: devDependencies needed for drizzle-kit, tsx, typescript, etc.
 ```
 
 ### 3.4 Setup Environment Variables
@@ -138,13 +146,13 @@ DATABASE_URL=postgresql://storify_user:your_secure_password@localhost:5432/stori
 SESSION_SECRET=generate-random-64-character-string-here
 PORT=5000
 NODE_ENV=production
-DOMAIN=storify.global-compliance-system.com
+DOMAIN=storify.asia
 
 # Xendit Configuration
 XENDIT_SECRET_KEY=xnd_production_YOUR_KEY_HERE
 XENDIT_WEBHOOK_TOKEN=generate-random-webhook-token-here
 XENDIT_PUBLIC_KEY=xnd_public_production_YOUR_KEY_HERE
-APP_URL=https://storify.global-compliance-system.com
+APP_URL=https://storify.asia
 ```
 
 **Generate Random Secrets:**
@@ -165,6 +173,10 @@ npm run db:push
 ### 3.6 Build Production
 ```bash
 npm run build
+
+# Optional: Remove devDependencies after build to save disk space
+# (WARNING: You'll need to run 'npm ci' again if you need to rebuild)
+# npm prune --production
 ```
 
 ---
@@ -176,12 +188,14 @@ npm run build
 Tambahkan A Record:
 ```
 Type: A
-Name: storify
+Name: @
 Value: <IP_SERVER_TENCENT>
 TTL: 600
 ```
 
-Domain yang dihasilkan: `storify.global-compliance-system.com`
+Domain yang dihasilkan: `storify.asia`
+
+**Catatan:** Gunakan `@` untuk root domain (storify.asia) atau `www` untuk subdomain (www.storify.asia)
 
 ---
 
@@ -189,12 +203,12 @@ Domain yang dihasilkan: `storify.global-compliance-system.com`
 
 ### 5.1 Generate SSL Certificate
 ```bash
-certbot certonly --nginx -d storify.global-compliance-system.com
+certbot certonly --nginx -d storify.asia -d www.storify.asia
 ```
 
 Atau jika nginx belum dikonfigurasi:
 ```bash
-certbot certonly --standalone -d storify.global-compliance-system.com
+certbot certonly --standalone -d storify.asia -d www.storify.asia
 ```
 
 ### 5.2 Auto-Renewal
@@ -273,11 +287,11 @@ curl http://localhost:5000/api/books
 
 ### 8.2 Test via Domain
 ```bash
-curl https://storify.global-compliance-system.com/api/books
+curl https://storify.asia/api/books
 ```
 
 ### 8.3 Buka di Browser
-Akses: https://storify.global-compliance-system.com
+Akses: https://storify.asia
 
 ---
 
@@ -306,7 +320,7 @@ Copy keys ke file `.env` di server
 Settings → Developers → Callbacks → Create New Webhook
 
 Webhook URL:
-https://storify.global-compliance-system.com/api/webhook/xendit
+https://storify.asia/api/webhook/xendit
 
 Events:
 ✅ invoice.paid
@@ -321,7 +335,7 @@ Di Xendit Dashboard, ada tombol "Test Webhook" untuk mengirim sample payload.
 
 Atau manual test:
 ```bash
-curl -X POST https://storify.global-compliance-system.com/api/webhook/xendit \
+curl -X POST https://storify.asia/api/webhook/xendit \
   -H "Content-Type: application/json" \
   -H "x-callback-token: YOUR_WEBHOOK_TOKEN" \
   -d '{
@@ -369,7 +383,7 @@ Di Console Tencent Cloud, pastikan Security Group mengizinkan:
 #!/bin/bash
 cd /var/www/storify
 git pull origin main
-npm install
+npm ci
 npm run build
 systemctl restart storify
 echo "Deployment complete!"
@@ -440,6 +454,21 @@ lsof -i :5000
 kill -9 <PID>
 ```
 
+### drizzle-kit: not found
+```bash
+# Install semua dependencies (termasuk devDependencies)
+cd /var/www/storify
+rm -rf node_modules
+npm ci
+```
+
+### npm ERR! Invalid comparator: npm:tsx
+```bash
+# Update npm ke versi terbaru
+npm install -g npm@latest
+npm --version  # Should be 10.x or higher
+```
+
 ---
 
 ## 📝 Quick Commands Reference
@@ -470,5 +499,5 @@ certbot renew
 ## 🎉 Selesai!
 
 Aplikasi Storify sekarang berjalan di:
-**https://storify.global-compliance-system.com**
+**https://storify.asia**
 
