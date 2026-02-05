@@ -14,6 +14,8 @@ import Favorites from "@/pages/Favorites";
 import Profile from "@/pages/Profile";
 import Subscription from "@/pages/Subscription";
 import NotFound from "@/pages/not-found";
+import SignIn from "./pages/auth/SignIn";
+import SignUp from "./pages/auth/SignUp";
 
 function Router() {
   return (
@@ -24,6 +26,8 @@ function Router() {
       <Route path="/favorites" component={Favorites} />
       <Route path="/profile" component={Profile} />
       <Route path="/subscription" component={Subscription} />
+      <Route path="/auth/signin" component={SignIn} />
+      <Route path="/auth/signup" component={SignUp} />
       <Route component={NotFound} />
     </Switch>
   );

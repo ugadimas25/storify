@@ -4,6 +4,9 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
 import { z } from "zod";
+import { users, sessions } from "@db/schema";
+import { hashPassword, verifyPassword, generateSessionId } from "./auth";
+import { eq } from "drizzle-orm";
 
 async function seedDatabase() {
   const books = await storage.getBooks();
@@ -398,6 +401,155 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error processing Xendit webhook:", error);
       res.status(500).json({ message: error.message || "Webhook processing failed" });
+    }
+  });
+
+  // Sign Up Route
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { email, password, name } = req.body;
+
+      if (!email || !password || !name) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // Check if user already exists
+      const existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingUser.length > 0) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
+      // Hash password and create user
+      const hashedPassword = await hashPassword(password);
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email,
+          password: hashedPassword,
+          name,
+        })
+        .returning();
+
+      // Create session
+      const sessionId = generateSessionId();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      await db.insert(sessions).values({
+        id: sessionId,
+        userId: newUser.id,
+        expiresAt,
+      });
+
+      req.session.userId = newUser.id;
+      req.session.sessionId = sessionId;
+
+      res.json({
+        message: "Sign up successful",
+        user: { id: newUser.id, email: newUser.email, name: newUser.name },
+      });
+    } catch (error) {
+      console.error("Sign up error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Sign In Route
+  app.post("/api/auth/signin", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      // Find user
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Verify password
+      const isValid = await verifyPassword(user.password, password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Create session
+      const sessionId = generateSessionId();
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      await db.insert(sessions).values({
+        id: sessionId,
+        userId: user.id,
+        expiresAt,
+      });
+
+      req.session.userId = user.id;
+      req.session.sessionId = sessionId;
+
+      res.json({
+        message: "Sign in successful",
+        user: { id: user.id, email: user.email, name: user.name },
+      });
+    } catch (error) {
+      console.error("Sign in error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Sign Out Route
+  app.post("/api/auth/signout", async (req, res) => {
+    try {
+      if (req.session.sessionId) {
+        await db.delete(sessions).where(eq(sessions.id, req.session.sessionId));
+      }
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destroy error:", err);
+        }
+        res.json({ message: "Sign out successful" });
+      });
+    } catch (error) {
+      console.error("Sign out error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get Current User Route
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const [user] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+        })
+        .from(users)
+        .where(eq(users.id, req.session.userId))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ user });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

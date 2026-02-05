@@ -47,29 +47,41 @@ export default function Home() {
     return "Good evening";
   };
 
+  const [, setLocation] = useLocation();
+
   return (
-    <div className="min-h-screen bg-background pb-32">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md px-6 py-4 flex justify-between items-center border-b border-transparent transition-colors duration-200">
-        <div>
-          <p className="text-sm text-muted-foreground font-medium">{getTimeGreeting()},</p>
-          <h1 className="text-xl font-display font-bold">
-            {user ? user.firstName || user.email?.split('@')[0] : 'Guest'}
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/explore">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Search className="w-5 h-5" />
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 pt-20 pb-32">
+        <div className="flex gap-4 justify-center">
+          {user?.user ? (
+            <Button
+              size="lg"
+              onClick={() => setLocation("/dashboard")}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              Go to Dashboard
             </Button>
-          </Link>
-          {/* Notification bell - visual only for MVP */}
-          <Button variant="ghost" size="icon" className="rounded-full relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-background"></span>
-          </Button>
+          ) : (
+            <>
+              <Button
+                size="lg"
+                onClick={() => setLocation("/auth/signin")}
+                variant="outline"
+              >
+                Sign In
+              </Button>
+              <Button
+                size="lg"
+                onClick={() => setLocation("/auth/signup")}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              >
+                Sign Up
+              </Button>
+            </>
+          )}
         </div>
-      </header>
+      </section>
 
       <main className="space-y-8 pt-4">
         {/* Continue Listening Section - Only show if user has recently played books */}
