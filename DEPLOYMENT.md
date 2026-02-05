@@ -128,7 +128,8 @@ cd /var/www/storify
 # Required for: building, database migrations, TypeScript compilation
 npm ci
 
-# Note: devDependencies needed for drizzle-kit, tsx, typescript, etc.
+# IMPORTANT: Jangan jalankan 'npm prune --production' sebelum db:push!
+# drizzle-kit, tsx, dan TypeScript ada di devDependencies
 ```
 
 ### 3.4 Setup Environment Variables
@@ -175,7 +176,7 @@ npm run db:push
 npm run build
 
 # Optional: Remove devDependencies after build to save disk space
-# (WARNING: You'll need to run 'npm ci' again if you need to rebuild)
+# HANYA jalankan setelah db:push dan build selesai!
 # npm prune --production
 ```
 
@@ -382,17 +383,44 @@ Di Console Tencent Cloud, pastikan Security Group mengizinkan:
 ```bash
 #!/bin/bash
 cd /var/www/storify
+
+# Pull latest code
 git pull origin main
+
+# Install all dependencies (including dev)
 npm ci
+
+# Push database schema (needs drizzle-kit from devDependencies)
+npm run db:push
+
+# Build application (rebuild frontend routes)
 npm run build
+
+# Restart service
 systemctl restart storify
-echo "Deployment complete!"
+
+echo "✅ Deployment complete!"
 ```
 
 Simpan sebagai `/var/www/storify/deploy.sh` dan jalankan:
 ```bash
 chmod +x /var/www/storify/deploy.sh
 ./deploy.sh
+```
+
+### Troubleshooting: Page Not Found untuk routes baru
+
+```bash
+# Setelah menambahkan routes baru (seperti /auth/signin, /auth/signup)
+# Pastikan rebuild aplikasi:
+
+cd /var/www/storify
+npm run build
+systemctl restart storify
+
+# Verify routing works:
+curl http://localhost:5000/auth/signin
+# Should return HTML, not 404
 ```
 
 ---
@@ -458,8 +486,26 @@ kill -9 <PID>
 ```bash
 # Install semua dependencies (termasuk devDependencies)
 cd /var/www/storify
-rm -rf node_modules
+rm -rf node_modules package-lock.json
+npm install
+
+# Atau gunakan npm ci untuk instalasi bersih
 npm ci
+
+# Verify drizzle-kit installed
+npx drizzle-kit --version
+```
+
+### npm run db:push error
+```bash
+# Pastikan devDependencies terinstall
+npm list drizzle-kit
+
+# Jika tidak ada, install ulang semua dependencies
+npm ci
+
+# Jalankan db:push
+npm run db:push
 ```
 
 ### npm ERR! Invalid comparator: npm:tsx
