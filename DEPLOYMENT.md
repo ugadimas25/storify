@@ -226,16 +226,41 @@ certbot renew --dry-run
 
 ### 6.1 Copy Konfigurasi
 ```bash
+# Jika file deploy/nginx/storify.conf ada di project
 cp /var/www/storify/deploy/nginx/storify.conf /etc/nginx/sites-available/storify
+
+# Jika file tidak ada, buat manual:
+cat > /etc/nginx/sites-available/storify << 'EOF'
+server {
+    listen 80;
+    server_name storify.asia www.storify.asia;
+
+    access_log /var/log/nginx/storify-access.log;
+    error_log /var/log/nginx/storify-error.log;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+EOF
 ```
 
 ### 6.2 Enable Site
 ```bash
 # Ubuntu/Debian
-ln -s /etc/nginx/sites-available/storify /etc/nginx/sites-enabled/
-
-# Hapus default (opsional)
-rm /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/storify /etc/nginx/sites-enabled/storify
 ```
 
 ### 6.3 Test dan Reload Nginx
