@@ -54,7 +54,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 pt-20 pb-32">
         <div className="flex gap-4 justify-center">
-          {user?.user ? (
+          {user ? (
             <Button
               size="lg"
               onClick={() => setLocation("/dashboard")}
