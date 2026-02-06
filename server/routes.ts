@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth/index";
 import { z } from "zod";
 import { users, sessions } from "@db/schema";
 import { hashPassword, verifyPassword, generateSessionId } from "./auth";
