@@ -1,7 +1,7 @@
 import https from "https";
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || "ugadimas@gmail.com";
+const FROM_EMAIL = process.env.FROM_EMAIL || "dimas.perceka@storify.asia";
 const FROM_NAME = process.env.FROM_NAME || "Storify Insights";
 
 if (!BREVO_API_KEY) {
