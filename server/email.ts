@@ -16,6 +16,17 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
+  console.log("=== BREVO EMAIL DEBUG ===");
+  console.log("BREVO_API_KEY set:", !!BREVO_API_KEY, "| length:", BREVO_API_KEY?.length || 0);
+  console.log("FROM:", FROM_NAME, "<" + FROM_EMAIL + ">");
+  console.log("TO:", options.to);
+  console.log("SUBJECT:", options.subject);
+
+  if (!BREVO_API_KEY) {
+    console.error("BREVO_API_KEY is missing! Cannot send email.");
+    return false;
+  }
+
   const payload = JSON.stringify({
     sender: { name: FROM_NAME, email: FROM_EMAIL },
     to: [{ email: options.to, name: options.toName || options.to }],
@@ -23,7 +34,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     htmlContent: options.htmlContent,
   });
 
-  return new Promise((resolve, reject) => {
+  console.log("Sending request to Brevo API...");
+
+  return new Promise((resolve) => {
     const req = https.request(
       {
         hostname: "api.brevo.com",
@@ -31,7 +44,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
         method: "POST",
         headers: {
           "accept": "application/json",
-          "api-key": BREVO_API_KEY,
+          "api-key": BREVO_API_KEY!,
           "content-type": "application/json",
           "content-length": Buffer.byteLength(payload),
         },
@@ -40,11 +53,13 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
         let data = "";
         res.on("data", (chunk) => (data += chunk));
         res.on("end", () => {
+          console.log("Brevo response status:", res.statusCode);
+          console.log("Brevo response body:", data);
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            console.log("Email sent successfully to:", options.to);
+            console.log("✅ Email sent successfully to:", options.to);
             resolve(true);
           } else {
-            console.error("Brevo API error:", res.statusCode, data);
+            console.error("❌ Brevo API error:", res.statusCode, data);
             resolve(false);
           }
         });
@@ -52,7 +67,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     );
 
     req.on("error", (err) => {
-      console.error("Email send error:", err);
+      console.error("❌ Email network error:", err.message);
       resolve(false);
     });
 
