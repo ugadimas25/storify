@@ -139,18 +139,18 @@ export function useUpdatePayment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ transactionId, status, paymentCustomerName, xenditPaymentMethod, xenditPaymentChannel }: {
+    mutationFn: async ({ transactionId, status, paymentCustomerName, dokuPaymentMethod, dokuPaymentChannel }: {
       transactionId: number;
       status: string;
       paymentCustomerName?: string;
-      xenditPaymentMethod?: string;
-      xenditPaymentChannel?: string;
+      dokuPaymentMethod?: string;
+      dokuPaymentChannel?: string;
     }) => {
       const res = await fetch(`/api/payment/${transactionId}/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ status, paymentCustomerName, xenditPaymentMethod, xenditPaymentChannel }),
+        body: JSON.stringify({ status, paymentCustomerName, dokuPaymentMethod, dokuPaymentChannel }),
       });
       if (!res.ok) throw new Error("Failed to update payment");
       return res.json();

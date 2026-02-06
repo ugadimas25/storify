@@ -77,7 +77,7 @@ export const listeningHistory = pgTable("listening_history", {
   playedAt: timestamp("played_at").defaultNow().notNull(),
 });
 
-// Payment transactions for Xendit
+// Payment transactions for DOKU
 export const paymentTransactions = pgTable("payment_transactions", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
@@ -85,12 +85,14 @@ export const paymentTransactions = pgTable("payment_transactions", {
   amount: integer("amount").notNull(),
   status: text("status").notNull().default("pending"), // pending, paid, expired, failed
   
-  // Xendit specific fields
-  xenditInvoiceId: text("xendit_invoice_id"), // Xendit Invoice ID
-  xenditInvoiceUrl: text("xendit_invoice_url"), // Payment URL for user
-  xenditExternalId: text("xendit_external_id"), // Our reference ID
-  xenditPaymentMethod: text("xendit_payment_method"), // EWALLET, VIRTUAL_ACCOUNT, QRIS, etc
-  xenditPaymentChannel: text("xendit_payment_channel"), // GOPAY, OVO, DANA, BCA, etc
+  // DOKU specific fields
+  dokuInvoiceNumber: text("doku_invoice_number"), // Our invoice number sent to DOKU
+  dokuPaymentUrl: text("doku_payment_url"), // DOKU Checkout page URL
+  dokuSessionId: text("doku_session_id"), // DOKU session ID from response
+  dokuTokenId: text("doku_token_id"), // DOKU token from response
+  dokuPaymentMethod: text("doku_payment_method"), // VIRTUAL_ACCOUNT, QRIS, EMONEY, etc
+  dokuPaymentChannel: text("doku_payment_channel"), // BCA, GOPAY, OVO, etc
+  dokuRequestId: text("doku_request_id"), // Unique request ID for DOKU
   
   expiredAt: timestamp("expired_at"),
   paidAt: timestamp("paid_at"),

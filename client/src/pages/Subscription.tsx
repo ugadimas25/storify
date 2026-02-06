@@ -1,4 +1,4 @@
-import { XenditPayment } from "@/components/XenditPayment";
+import { DokuPayment } from "@/components/DokuPayment";
 import { useActiveSubscription, useListeningStatus } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,8 +110,8 @@ export default function Subscription() {
           </Card>
         </div>
 
-        {/* Xendit Payment Component */}
-        <XenditPayment 
+        {/* DOKU Payment Component */}
+        <DokuPayment 
           onSuccess={() => {
             // Navigate to home or explore after successful payment
           }}
@@ -187,19 +187,20 @@ export default function Subscription() {
             <div>
               <h4 className="font-medium">Bagaimana cara membayar?</h4>
               <p className="text-sm text-muted-foreground">
-                Pilih paket langganan, lalu scan QR Code yang muncul menggunakan aplikasi e-wallet favorit Anda (GoPay, OVO, DANA, ShopeePay, LinkAja).
+                Pilih paket langganan, lalu Anda akan diarahkan ke halaman pembayaran DOKU. 
+                Pilih metode pembayaran seperti QRIS, Virtual Account (BCA, Mandiri, BRI, BNI), ShopeePay, atau OVO.
               </p>
             </div>
             <div>
               <h4 className="font-medium">Apakah pembayaran aman?</h4>
               <p className="text-sm text-muted-foreground">
-                Ya, semua transaksi menggunakan QRIS yang dijamin keamanannya oleh Bank Indonesia.
+                Ya, semua transaksi diproses oleh DOKU — payment gateway Indonesia yang terdaftar di Bank Indonesia dan bersertifikat PCI DSS Level 1.
               </p>
             </div>
             <div>
-              <h4 className="font-medium">Berapa lama QR Code berlaku?</h4>
+              <h4 className="font-medium">Berapa lama waktu untuk membayar?</h4>
               <p className="text-sm text-muted-foreground">
-                QR Code berlaku selama 30 menit. Jika kedaluwarsa, Anda bisa membuat pembayaran baru.
+                Anda memiliki waktu 60 menit setelah membuat pembayaran. Jika kedaluwarsa, Anda bisa membuat pembayaran baru.
               </p>
             </div>
             <div>

@@ -52,10 +52,17 @@ export interface IStorage {
   getListeningCount(userId?: string, visitorId?: string): Promise<number>;
 
   // Payment Transactions
-  createPaymentTransaction(userId: string, planId: number, amount: number): Promise<PaymentTransaction>;
+  createPaymentTransaction(userId: string, planId: number, amount: number, dokuData?: {
+    dokuInvoiceNumber?: string;
+    dokuPaymentUrl?: string;
+    dokuSessionId?: string;
+    dokuTokenId?: string;
+    dokuRequestId?: string;
+    expiredAt?: Date;
+  }): Promise<PaymentTransaction>;
   updatePaymentTransaction(id: number, data: Partial<PaymentTransaction>): Promise<PaymentTransaction | undefined>;
   getPaymentTransaction(id: number): Promise<PaymentTransaction | undefined>;
-  getPaymentTransactionByInvoiceId(invoiceId: string): Promise<PaymentTransaction | undefined>;
+  getPaymentTransactionByInvoiceNumber(invoiceNumber: string): Promise<PaymentTransaction | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -333,16 +340,18 @@ export class DatabaseStorage implements IStorage {
     userId: string, 
     planId: number, 
     amount: number, 
-    xenditData?: {
-      xenditInvoiceId?: string;
-      xenditInvoiceUrl?: string;
-      xenditExternalId?: string;
+    dokuData?: {
+      dokuInvoiceNumber?: string;
+      dokuPaymentUrl?: string;
+      dokuSessionId?: string;
+      dokuTokenId?: string;
+      dokuRequestId?: string;
       expiredAt?: Date;
     }
   ): Promise<PaymentTransaction> {
-    const expiredAt = xenditData?.expiredAt || (() => {
+    const expiredAt = dokuData?.expiredAt || (() => {
       const date = new Date();
-      date.setHours(date.getHours() + 24); // 24 hours expiry
+      date.setMinutes(date.getMinutes() + 60); // 60 minutes expiry
       return date;
     })();
 
@@ -351,9 +360,11 @@ export class DatabaseStorage implements IStorage {
       planId,
       amount,
       status: 'pending',
-      xenditInvoiceId: xenditData?.xenditInvoiceId || null,
-      xenditInvoiceUrl: xenditData?.xenditInvoiceUrl || null,
-      xenditExternalId: xenditData?.xenditExternalId || null,
+      dokuInvoiceNumber: dokuData?.dokuInvoiceNumber || null,
+      dokuPaymentUrl: dokuData?.dokuPaymentUrl || null,
+      dokuSessionId: dokuData?.dokuSessionId || null,
+      dokuTokenId: dokuData?.dokuTokenId || null,
+      dokuRequestId: dokuData?.dokuRequestId || null,
       expiredAt,
     }).returning();
 
@@ -374,11 +385,11 @@ export class DatabaseStorage implements IStorage {
     return transaction;
   }
 
-  async getPaymentTransactionByExternalId(externalId: string): Promise<PaymentTransaction | undefined> {
+  async getPaymentTransactionByInvoiceNumber(invoiceNumber: string): Promise<PaymentTransaction | undefined> {
     const [transaction] = await db
       .select()
       .from(paymentTransactions)
-      .where(eq(paymentTransactions.xenditExternalId, externalId));
+      .where(eq(paymentTransactions.dokuInvoiceNumber, invoiceNumber));
     return transaction;
   }
 }

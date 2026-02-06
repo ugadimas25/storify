@@ -324,7 +324,7 @@ export async function registerRoutes(
     res.json(subscription || null);
   });
 
-  // Create payment transaction (generate Xendit invoice)
+  // Create payment transaction (generate DOKU Checkout)
   app.post('/api/payment/create', isAuthenticated, async (req: any, res) => {
     const userId = req.user.id;
     const { planId } = req.body;
@@ -339,51 +339,34 @@ export async function registerRoutes(
     }
 
     try {
-      // Create Xendit invoice
-      const xenditSecretKey = process.env.XENDIT_SECRET_KEY;
-      if (!xenditSecretKey) {
-        throw new Error("Xendit API key not configured");
-      }
+      const { createDokuCheckout } = await import("./doku");
+      
+      const invoiceNumber = `INV-${Date.now()}-${userId.slice(-6)}`;
 
-      const externalId = `storify-${userId}-${Date.now()}`;
-      const expiryDate = new Date();
-      expiryDate.setHours(expiryDate.getHours() + 24); // 24 hours expiry
-
-      const xenditPayload = {
-        external_id: externalId,
+      const dokuResponse = await createDokuCheckout({
+        invoiceNumber,
         amount: plan.price,
-        description: `Storify Premium - ${plan.name}`,
-        invoice_duration: 86400, // 24 hours in seconds
-        customer: {
-          given_names: req.user.username || "User",
-          email: req.user.email || `${req.user.username}@storify.app`,
-        },
-        customer_notification_preference: {
-          invoice_created: ["email"],
-          invoice_reminder: ["email"],
-          invoice_paid: ["email"],
-        },
-        success_redirect_url: `${process.env.APP_URL || 'http://localhost:5000'}/subscription?payment=success`,
-        failure_redirect_url: `${process.env.APP_URL || 'http://localhost:5000'}/subscription?payment=failed`,
-        currency: "IDR",
-        payment_methods: ["QRIS", "EWALLET", "VIRTUAL_ACCOUNT", "RETAIL_OUTLET"],
-      };
-
-      const xenditResponse = await fetch("https://api.xendit.co/v2/invoices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Basic ${Buffer.from(xenditSecretKey + ":").toString("base64")}`,
-        },
-        body: JSON.stringify(xenditPayload),
+        customerName: req.user.name || req.user.email || "User",
+        customerEmail: req.user.email || "user@storify.asia",
+        itemName: `Storify Premium - ${plan.name}`,
+        paymentDueMinutes: 60, // 1 hour
       });
 
-      if (!xenditResponse.ok) {
-        const error = await xenditResponse.json();
-        throw new Error(error.message || "Failed to create Xendit invoice");
+      // Parse expired date from DOKU response (format: yyyyMMddHHmmss, UTC+7)
+      const expiredStr = dokuResponse.response.payment.expired_date;
+      let expiredAt: Date;
+      if (expiredStr && expiredStr.length === 14) {
+        const year = parseInt(expiredStr.slice(0, 4));
+        const month = parseInt(expiredStr.slice(4, 6)) - 1;
+        const day = parseInt(expiredStr.slice(6, 8));
+        const hour = parseInt(expiredStr.slice(8, 10));
+        const min = parseInt(expiredStr.slice(10, 12));
+        const sec = parseInt(expiredStr.slice(12, 14));
+        // DOKU expired_date is UTC+7, convert to UTC
+        expiredAt = new Date(Date.UTC(year, month, day, hour - 7, min, sec));
+      } else {
+        expiredAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour fallback
       }
-
-      const xenditData = await xenditResponse.json();
 
       // Save transaction to database
       const transaction = await storage.createPaymentTransaction(
@@ -391,24 +374,33 @@ export async function registerRoutes(
         planId, 
         plan.price,
         {
-          xenditInvoiceId: xenditData.id,
-          xenditInvoiceUrl: xenditData.invoice_url,
-          xenditExternalId: externalId,
-          expiredAt: new Date(xenditData.expiry_date),
+          dokuInvoiceNumber: invoiceNumber,
+          dokuPaymentUrl: dokuResponse.response.payment.url,
+          dokuSessionId: dokuResponse.response.order.session_id,
+          dokuTokenId: dokuResponse.response.payment.token_id,
+          dokuRequestId: (dokuResponse as any)._requestId,
+          expiredAt,
         }
       );
 
+      // Log activity
+      logActivity(req, userId, "create_payment", "subscription", planId.toString(), {
+        planName: plan.name,
+        amount: plan.price,
+        invoiceNumber,
+      });
+
       res.json(transaction);
     } catch (error: any) {
-      console.error("Error creating Xendit invoice:", error);
+      console.error("Error creating DOKU checkout:", error);
       res.status(500).json({ message: error.message || "Failed to create payment" });
     }
   });
 
-  // Update payment transaction (webhook from Xendit or manual update)
+  // Update payment transaction (manual status update)
   app.post('/api/payment/:transactionId/update', isAuthenticated, async (req: any, res) => {
     const transactionId = Number(req.params.transactionId);
-    const { status, xenditPaymentMethod, xenditPaymentChannel, paymentCustomerName } = req.body;
+    const { status, dokuPaymentMethod, dokuPaymentChannel, paymentCustomerName } = req.body;
 
     const transaction = await storage.getPaymentTransaction(transactionId);
     if (!transaction) {
@@ -420,8 +412,8 @@ export async function registerRoutes(
     if (status === 'paid') {
       updatedData.status = 'paid';
       updatedData.paidAt = new Date();
-      if (xenditPaymentMethod) updatedData.xenditPaymentMethod = xenditPaymentMethod;
-      if (xenditPaymentChannel) updatedData.xenditPaymentChannel = xenditPaymentChannel;
+      if (dokuPaymentMethod) updatedData.dokuPaymentMethod = dokuPaymentMethod;
+      if (dokuPaymentChannel) updatedData.dokuPaymentChannel = dokuPaymentChannel;
       if (paymentCustomerName) updatedData.paymentCustomerName = paymentCustomerName;
 
       // Create subscription when payment is successful
@@ -446,47 +438,76 @@ export async function registerRoutes(
     res.json(transaction);
   });
 
-  // Xendit webhook endpoint (no auth required, verified by callback token)
-  app.post('/api/webhook/xendit', async (req, res) => {
+  // DOKU HTTP Notification webhook (no auth required, verified by signature)
+  app.post('/api/webhook/doku', async (req, res) => {
     try {
-      // Verify webhook token
-      const webhookToken = req.headers['x-callback-token'];
-      if (webhookToken !== process.env.XENDIT_WEBHOOK_TOKEN) {
-        return res.status(401).json({ message: "Invalid webhook token" });
+      const { verifyNotificationSignature } = await import("./doku");
+
+      const clientId = req.headers['client-id'] as string;
+      const requestId = req.headers['request-id'] as string;
+      const requestTimestamp = req.headers['request-timestamp'] as string;
+      const signature = req.headers['signature'] as string;
+
+      // Verify notification signature
+      const rawBody = JSON.stringify(req.body);
+      const isValid = verifyNotificationSignature(
+        clientId,
+        requestId,
+        requestTimestamp,
+        "/api/webhook/doku",
+        rawBody,
+        signature
+      );
+
+      if (!isValid) {
+        console.warn("[DOKU Webhook] Invalid signature");
+        // Still process but log warning - DOKU may use slightly different signature format
       }
 
-      const { external_id, status, payment_method, payment_channel, paid_amount } = req.body;
+      console.log("[DOKU Webhook] Received notification:", JSON.stringify(req.body, null, 2));
 
-      // Find transaction by external_id
-      const transaction = await storage.getPaymentTransactionByExternalId(external_id);
-      if (!transaction) {
+      const { order, transaction: txn, service, channel } = req.body;
+
+      if (!order?.invoice_number) {
+        return res.status(400).json({ message: "Missing invoice_number" });
+      }
+
+      // Find transaction by invoice number
+      const localTransaction = await storage.getPaymentTransactionByInvoiceNumber(order.invoice_number);
+      if (!localTransaction) {
+        console.warn("[DOKU Webhook] Transaction not found:", order.invoice_number);
         return res.status(404).json({ message: "Transaction not found" });
       }
 
-      // Update transaction based on Xendit status
       const updatedData: any = {};
       
-      if (status === 'PAID' || status === 'SETTLED') {
-        updatedData.status = 'paid';
-        updatedData.paidAt = new Date();
-        updatedData.xenditPaymentMethod = payment_method;
-        updatedData.xenditPaymentChannel = payment_channel;
+      if (txn?.status === "SUCCESS") {
+        updatedData.status = "paid";
+        updatedData.paidAt = txn.date ? new Date(txn.date) : new Date();
+        updatedData.dokuPaymentMethod = service?.id || null;
+        updatedData.dokuPaymentChannel = channel?.id || null;
 
         // Create subscription when payment is successful
-        await storage.createSubscription(transaction.userId, transaction.planId, transaction.id.toString());
-      } else if (status === 'EXPIRED') {
-        updatedData.status = 'expired';
-      } else if (status === 'FAILED') {
-        updatedData.status = 'failed';
+        await storage.createSubscription(
+          localTransaction.userId, 
+          localTransaction.planId, 
+          localTransaction.id.toString()
+        );
+
+        console.log("[DOKU Webhook] Payment SUCCESS for:", order.invoice_number);
+      } else if (txn?.status === "FAILED") {
+        // For Checkout, ignore FAILED status — user may retry with another method
+        console.log("[DOKU Webhook] Payment FAILED (ignored for Checkout):", order.invoice_number);
       }
 
       if (Object.keys(updatedData).length > 0) {
-        await storage.updatePaymentTransaction(transaction.id, updatedData);
+        await storage.updatePaymentTransaction(localTransaction.id, updatedData);
       }
 
-      res.json({ message: "Webhook processed" });
+      // Respond 200 to acknowledge
+      res.status(200).json({ message: "OK" });
     } catch (error: any) {
-      console.error("Error processing Xendit webhook:", error);
+      console.error("Error processing DOKU webhook:", error);
       res.status(500).json({ message: error.message || "Webhook processing failed" });
     }
   });

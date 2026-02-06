@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { 
   useSubscriptionPlans, 
   useCreatePayment, 
@@ -13,25 +13,25 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckCircle, XCircle, Crown, Music, Clock, RefreshCw, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Payment method logos
+// Payment methods available through DOKU Checkout
 const PAYMENT_METHODS = [
   { name: "QRIS", logo: "📱" },
-  { name: "GoPay", logo: "💚" },
-  { name: "OVO", logo: "💜" },
-  { name: "DANA", logo: "💙" },
+  { name: "BCA VA", logo: "🏦" },
+  { name: "Mandiri VA", logo: "🏦" },
+  { name: "BRI VA", logo: "🏦" },
+  { name: "BNI VA", logo: "🏦" },
   { name: "ShopeePay", logo: "🧡" },
-  { name: "Virtual Account", logo: "🏦" },
-  { name: "Retail Outlet", logo: "🏪" },
+  { name: "OVO", logo: "💜" },
 ];
 
 type PaymentState = "idle" | "pending" | "paid" | "expired" | "failed";
 
-interface XenditPaymentProps {
+interface DokuPaymentProps {
   onSuccess?: () => void;
   onClose?: () => void;
 }
 
-export function XenditPayment({ onSuccess, onClose }: XenditPaymentProps) {
+export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
   const { user } = useAuth();
   const { data: plans, isLoading: plansLoading } = useSubscriptionPlans();
   const { data: activeSubscription } = useActiveSubscription();
@@ -89,10 +89,15 @@ export function XenditPayment({ onSuccess, onClose }: XenditPaymentProps) {
     return () => clearInterval(timer);
   }, [paymentState, timeLeft]);
 
-  // Format time as MM:SS
+  // Format time as HH:MM:SS or MM:SS
   const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
+    
+    if (hrs > 0) {
+      return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
@@ -117,21 +122,21 @@ export function XenditPayment({ onSuccess, onClose }: XenditPaymentProps) {
     try {
       const transaction = await createPayment.mutateAsync(planId);
       setCurrentTransaction(transaction.id);
-      setPaymentUrl(transaction.xenditInvoiceUrl || "");
+      setPaymentUrl(transaction.dokuPaymentUrl || "");
       setPaymentState("pending");
       
-      // Set initial countdown (24 hours)
+      // Set initial countdown
       if (transaction.expiredAt) {
         const expiry = new Date(transaction.expiredAt).getTime();
         const now = Date.now();
         setTimeLeft(Math.max(0, Math.floor((expiry - now) / 1000)));
       } else {
-        setTimeLeft(24 * 60 * 60); // Default 24 hours
+        setTimeLeft(60 * 60); // Default 1 hour
       }
       
-      // Open Xendit payment page in new tab
-      if (transaction.xenditInvoiceUrl) {
-        window.open(transaction.xenditInvoiceUrl, '_blank');
+      // Open DOKU payment page in new tab
+      if (transaction.dokuPaymentUrl) {
+        window.open(transaction.dokuPaymentUrl, '_blank');
       }
     } catch (error: any) {
       console.error("Payment creation failed:", error);
@@ -223,7 +228,7 @@ export function XenditPayment({ onSuccess, onClose }: XenditPaymentProps) {
           </CardTitle>
           <CardDescription className="text-red-600 dark:text-red-300">
             {paymentState === "expired" 
-              ? "QR Code sudah kedaluwarsa. Silakan coba lagi."
+              ? "Halaman pembayaran sudah kedaluwarsa. Silakan coba lagi."
               : "Terjadi kesalahan dalam pembayaran. Silakan coba lagi."}
           </CardDescription>
         </CardHeader>
@@ -252,9 +257,19 @@ export function XenditPayment({ onSuccess, onClose }: XenditPaymentProps) {
         <CardContent className="space-y-6">
           {/* Payment link */}
           <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
+            <div className="flex items-center justify-center w-16 h-16 bg-white dark:bg-gray-800 rounded-xl shadow-md">
+              <img 
+                src="https://dashboard.doku.com/docs/img/doku-logo.svg" 
+                alt="DOKU" 
+                className="w-10 h-10"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
             <div className="text-center space-y-2">
-              <p className="font-medium">Halaman pembayaran telah dibuka</p>
-              <p className="text-sm text-muted-foreground">Silakan selesaikan pembayaran di tab baru</p>
+              <p className="font-medium">Halaman pembayaran DOKU telah dibuka</p>
+              <p className="text-sm text-muted-foreground">Pilih metode pembayaran dan selesaikan di tab baru</p>
             </div>
             <Button 
               onClick={() => window.open(paymentUrl, '_blank')}
@@ -271,20 +286,20 @@ export function XenditPayment({ onSuccess, onClose }: XenditPaymentProps) {
               <Clock className="w-5 h-5 text-orange-500" />
               <span className={cn(
                 "font-mono text-xl",
-                timeLeft < 3600 ? "text-red-500" : "text-orange-500"
+                timeLeft < 300 ? "text-red-500" : "text-orange-500"
               )}>
                 {formatTime(timeLeft)}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Invoice akan kedaluwarsa dalam waktu di atas
+              Selesaikan pembayaran sebelum waktu habis
             </p>
           </div>
 
           {/* Payment methods */}
           <div className="space-y-2">
             <p className="text-sm text-center text-muted-foreground">
-              Metode pembayaran yang didukung:
+              Metode pembayaran yang tersedia:
             </p>
             <div className="flex justify-center gap-2 flex-wrap">
               {PAYMENT_METHODS.map((method) => (
@@ -309,7 +324,7 @@ export function XenditPayment({ onSuccess, onClose }: XenditPaymentProps) {
           <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
             <p className="font-medium">Cara Pembayaran:</p>
             <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-              <li>Pilih metode pembayaran di halaman Xendit</li>
+              <li>Pilih metode pembayaran di halaman DOKU</li>
               <li>Selesaikan pembayaran sesuai instruksi</li>
               <li>Subscription akan aktif otomatis setelah pembayaran berhasil</li>
             </ol>
@@ -414,6 +429,13 @@ export function XenditPayment({ onSuccess, onClose }: XenditPaymentProps) {
             </Card>
           );
         })}
+      </div>
+
+      {/* Powered by DOKU */}
+      <div className="text-center">
+        <p className="text-xs text-muted-foreground">
+          Pembayaran diproses oleh <strong>DOKU</strong> — Payment Gateway terpercaya sejak 2007
+        </p>
       </div>
 
       {/* Login prompt for guests */}

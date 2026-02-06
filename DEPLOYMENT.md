@@ -96,8 +96,9 @@ PORT=5001
 # Database
 DATABASE_URL=postgresql://storify_user:password_aman_anda@localhost:5432/storify_db
 
-# Xendit (Production Keys dari dashboard.xendit.co)
-XENDIT_SECRET_KEY=xnd_production_your_key_here
+# DOKU (Production Keys dari dashboard.doku.com)
+DOKU_CLIENT_ID=MCH-xxxx-xxxx-xxxx
+DOKU_SECRET_KEY=SK-xxxx-xxxx-xxxx
 XENDIT_PUBLIC_KEY=xnd_public_production_your_key_here
 
 # Webhook (generate dengan: openssl rand -hex 32)
