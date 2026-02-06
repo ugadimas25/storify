@@ -95,11 +95,11 @@ export default function SignUp() {
   // Verification sent state
   if (verificationSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#a1dab4]/20 via-white to-[#41b6c4]/10 px-4">
         <Card className="w-full max-w-md text-center">
           <CardHeader className="pb-4">
             <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-3">
-              <Mail className="w-8 h-8 text-purple-600" />
+              <Mail className="w-8 h-8 text-[#2c7fb8]" />
             </div>
             <CardTitle className="text-xl">Cek Email Anda</CardTitle>
             <CardDescription className="text-sm leading-relaxed">
@@ -129,7 +129,7 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#a1dab4]/20 via-white to-[#41b6c4]/10 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Daftar Akun</CardTitle>
@@ -183,7 +183,7 @@ export default function SignUp() {
                 minLength={6}
               />
             </div>
-            <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-gradient-to-r from-[#253494] to-[#2c7fb8] hover:from-[#253494]/90 hover:to-[#2c7fb8]/90" disabled={isLoading}>
               {isLoading ? "Membuat akun..." : "Daftar"}
             </Button>
           </form>

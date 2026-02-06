@@ -1,9 +1,22 @@
-import { pgTable, text, serial, integer, boolean, real, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, real, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./models/auth";
 
 export * from "./models/auth";
+
+// Activity logs - tracks all user actions
+export const activityLogs = pgTable("activity_logs", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  action: text("action").notNull(), // login, logout, view_book, play_book, favorite, unfavorite, subscribe, page_view, search
+  resourceType: text("resource_type"), // book, subscription, page, etc.
+  resourceId: text("resource_id"), // book ID, plan ID, page path, etc.
+  metadata: jsonb("metadata"), // extra data (book title, search query, device info, etc.)
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 export const books = pgTable("books", {
   id: serial("id").primaryKey(),
@@ -92,6 +105,7 @@ export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true });
 export const insertListeningHistorySchema = createInsertSchema(listeningHistory).omit({ id: true, playedAt: true });
 export const insertPaymentTransactionSchema = createInsertSchema(paymentTransactions).omit({ id: true, createdAt: true });
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({ id: true, createdAt: true });
 
 export type Book = typeof books.$inferSelect;
 export type InsertBook = z.infer<typeof insertBookSchema>;
@@ -107,6 +121,8 @@ export type ListeningHistory = typeof listeningHistory.$inferSelect;
 export type InsertListeningHistory = z.infer<typeof insertListeningHistorySchema>;
 export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 
 export type CreateBookRequest = InsertBook;
 export type UpdateBookRequest = Partial<InsertBook>;

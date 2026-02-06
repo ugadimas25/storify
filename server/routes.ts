@@ -5,7 +5,7 @@ import { db } from "./db";
 import { api } from "@shared/routes";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth/index";
 import { z } from "zod";
-import { users, sessions } from "@db/schema";
+import { users, sessions, activityLogs } from "@db/schema";
 import { hashPassword, verifyPassword, generateSessionId } from "./auth";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
@@ -42,6 +42,31 @@ function verificationResultPage(success: boolean, message: string): string {
 <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 24px;">${message}</p>
 <a href="${btnHref}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-size:14px;font-weight:600;">${btnText}</a>
 </div></body></html>`;
+}
+
+// Helper: Log user activity (fire-and-forget, never throws)
+async function logActivity(
+  req: any,
+  userId: string,
+  action: string,
+  resourceType?: string,
+  resourceId?: string,
+  metadata?: Record<string, any>
+) {
+  try {
+    await db.insert(activityLogs).values({
+      userId,
+      action,
+      resourceType: resourceType || null,
+      resourceId: resourceId || null,
+      metadata: metadata || null,
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || null,
+      userAgent: req.headers["user-agent"] || null,
+    });
+  } catch (err) {
+    // Silent fail — activity logging should never break the app
+    console.error("Activity log error:", err);
+  }
 }
 
 async function seedDatabase() {
@@ -131,6 +156,11 @@ export async function registerRoutes(
     if (!book) {
       return res.status(404).json({ message: "Book not found" });
     }
+    // Log book view if user is logged in
+    const userId = (req.session as any)?.user?.id;
+    if (userId) {
+      logActivity(req, userId, "view_book", "book", String(book.id), { title: book.title, author: book.author });
+    }
     res.json(book);
   });
 
@@ -168,9 +198,11 @@ export async function registerRoutes(
     const exists = await storage.isFavorite(userId, bookId);
     if (exists) {
       await storage.removeFavorite(userId, bookId);
+      logActivity(req, userId, "unfavorite", "book", String(bookId));
       res.json({ isFavorite: false });
     } else {
       await storage.addFavorite(userId, bookId);
+      logActivity(req, userId, "favorite", "book", String(bookId));
       res.json({ isFavorite: true });
     }
   });
@@ -221,6 +253,15 @@ export async function registerRoutes(
     }
     
     await storage.savePlaybackProgress(userId, bookId, progress, currentTime);
+    // Fetch book info for rich activity log
+    const book = await storage.getBook(bookId);
+    logActivity(req, userId, "play_book", "book", String(bookId), {
+      title: book?.title || "Unknown",
+      author: book?.author || "Unknown",
+      category: book?.category || null,
+      progress,
+      currentTime,
+    });
     res.json({ success: true });
   });
 
@@ -260,6 +301,16 @@ export async function registerRoutes(
     }
 
     await storage.recordListening(bookId, userId, visitorId);
+
+    // Log listening activity with book details
+    if (userId) {
+      const book = await storage.getBook(bookId);
+      logActivity(req, userId, "listen_book", "book", String(bookId), {
+        title: book?.title || "Unknown",
+        author: book?.author || "Unknown",
+        category: book?.category || null,
+      });
+    }
     
     // Return updated status
     const updatedStatus = await storage.checkListeningStatus(userId, visitorId);
@@ -638,6 +689,9 @@ export async function registerRoutes(
         profileImageUrl: user.profileImageUrl,
       };
 
+      // Log login activity
+      logActivity(req, user.id, "login", "auth", undefined, { email: user.email });
+
       res.json({
         message: "Sign in successful",
         user: { id: user.id, email: user.email, name: user.name },
@@ -651,6 +705,10 @@ export async function registerRoutes(
   // Sign Out Route
   app.post("/api/auth/signout", async (req, res) => {
     try {
+      const userId = req.session?.user?.id;
+      if (userId) {
+        logActivity(req, userId, "logout", "auth");
+      }
       req.session.destroy((err) => {
         if (err) {
           console.error("Session destroy error:", err);
@@ -691,6 +749,54 @@ export async function registerRoutes(
       res.json(user);
     } catch (error) {
       console.error("Get user error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ============= ACTIVITY LOG ROUTES =============
+
+  // Client-side activity logging (page views, search, etc.)
+  app.post("/api/activity/log", async (req: any, res) => {
+    try {
+      const userId = req.session?.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const { action, resourceType, resourceId, metadata } = req.body;
+      if (!action) {
+        return res.status(400).json({ message: "Action is required" });
+      }
+      logActivity(req, userId, action, resourceType, resourceId, metadata);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get activity logs (admin / user's own logs)
+  app.get("/api/activity/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session?.user?.id || (req as any).user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const limit = Math.min(Number(req.query.limit) || 50, 200);
+      const offset = Number(req.query.offset) || 0;
+
+      const { desc } = await import("drizzle-orm");
+
+      const logs = await db
+        .select()
+        .from(activityLogs)
+        .where(eq(activityLogs.userId, userId))
+        .orderBy(desc(activityLogs.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      res.json(logs);
+    } catch (error) {
+      console.error("Get activity logs error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

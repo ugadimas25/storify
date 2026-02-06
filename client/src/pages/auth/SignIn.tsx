@@ -87,7 +87,7 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#a1dab4]/20 via-white to-[#41b6c4]/10 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Masuk</CardTitle>
@@ -132,7 +132,7 @@ export default function SignIn() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-gradient-to-r from-[#253494] to-[#2c7fb8] hover:from-[#253494]/90 hover:to-[#2c7fb8]/90" disabled={isLoading}>
               {isLoading ? "Memproses..." : "Masuk"}
             </Button>
           </form>

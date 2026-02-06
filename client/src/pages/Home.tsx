@@ -5,7 +5,8 @@ import { BookCard } from "@/components/BookCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
-import { Search, Play, ChevronRight, Headphones, BookOpen, Sparkles, ArrowRight } from "lucide-react";
+import { Search, Play, ChevronLeft, ChevronRight, Headphones, BookOpen, Sparkles, ArrowRight } from "lucide-react";
+import { useRef, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Book } from "@shared/schema";
@@ -40,6 +41,25 @@ export default function Home() {
     enabled: !!user,
   });
 
+  // Slider refs and scroll logic
+  const featuredRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const updateScrollState = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  const scrollFeatured = (direction: "left" | "right") => {
+    const el = featuredRef.current;
+    if (!el) return;
+    const scrollAmount = el.clientWidth * 0.7;
+    el.scrollBy({ left: direction === "left" ? -scrollAmount : scrollAmount, behavior: "smooth" });
+    setTimeout(() => updateScrollState(el), 350);
+  };
+
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Selamat pagi";
@@ -54,11 +74,11 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-700" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#253494] via-[#2c7fb8] to-[#41b6c4]" />
         {/* Decorative circles */}
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-purple-400/20 rounded-full blur-2xl" />
-        <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-blue-400/15 rounded-full blur-2xl" />
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#a1dab4]/15 rounded-full blur-3xl" />
+        <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-[#41b6c4]/20 rounded-full blur-2xl" />
+        <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-[#ffffcc]/10 rounded-full blur-2xl" />
 
         <div className="relative px-6 pt-12 pb-8">
           {user ? (
@@ -99,7 +119,7 @@ export default function Home() {
                   className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center cursor-pointer hover:bg-white/20 transition-colors"
                   onClick={() => setLocation("/explore")}
                 >
-                  <Sparkles className="w-5 h-5 text-yellow-300 mx-auto mb-1" />
+                  <Sparkles className="w-5 h-5 text-[#ffffcc] mx-auto mb-1" />
                   <p className="text-xs text-white/60">Explore</p>
                   <p className="text-lg font-bold text-white">
                     <ArrowRight className="w-5 h-5 mx-auto" />
@@ -116,14 +136,14 @@ export default function Home() {
             >
               {/* Logo / Brand */}
               <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 mx-auto">
-                <Headphones className="w-4 h-4 text-yellow-300" />
+                <Headphones className="w-4 h-4 text-[#ffffcc]" />
                 <span className="text-sm font-semibold text-white">Storify Insights</span>
               </div>
 
               <div className="space-y-3">
                 <h1 className="text-3xl font-bold text-white leading-tight">
                   Dengarkan Ringkasan<br />
-                  <span className="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-[#ffffcc] to-[#a1dab4] bg-clip-text text-transparent">
                     Buku Terbaik
                   </span>
                 </h1>
@@ -144,7 +164,7 @@ export default function Home() {
                 <Button
                   size="lg"
                   onClick={() => setLocation("/auth/signup")}
-                  className="bg-white text-purple-700 hover:bg-white/90 rounded-xl px-6 font-semibold shadow-lg shadow-black/10"
+                  className="bg-[#ffffcc] text-[#253494] hover:bg-[#ffffcc]/90 rounded-xl px-6 font-semibold shadow-lg shadow-black/10"
                 >
                   Daftar Gratis
                   <ArrowRight className="w-4 h-4 ml-1" />
@@ -155,7 +175,7 @@ export default function Home() {
               <div className="flex items-center justify-center gap-1.5 pt-1">
                 <div className="flex -space-x-2">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="w-6 h-6 rounded-full bg-white/20 border-2 border-purple-600 flex items-center justify-center">
+                    <div key={i} className="w-6 h-6 rounded-full bg-white/20 border-2 border-[#2c7fb8] flex items-center justify-center">
                       <span className="text-[8px] text-white font-bold">{['A', 'R', 'M'][i-1]}</span>
                     </div>
                   ))}
@@ -242,13 +262,33 @@ export default function Home() {
         )}
 
         {/* Featured Section */}
-        <section>
+        <section className="relative group/featured">
           <div className="px-6 mb-4 flex justify-between items-end">
             <h2 className="text-lg font-bold font-display">Featured</h2>
-            <Link href="/explore" className="text-xs font-semibold text-primary">View All</Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => scrollFeatured("left")}
+                className={`w-8 h-8 rounded-full border border-border flex items-center justify-center transition-all ${canScrollLeft ? 'bg-primary text-primary-foreground shadow-sm hover:shadow-md' : 'bg-muted/50 text-muted-foreground/40 cursor-default'}`}
+                disabled={!canScrollLeft}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => scrollFeatured("right")}
+                className={`w-8 h-8 rounded-full border border-border flex items-center justify-center transition-all ${canScrollRight ? 'bg-primary text-primary-foreground shadow-sm hover:shadow-md' : 'bg-muted/50 text-muted-foreground/40 cursor-default'}`}
+                disabled={!canScrollRight}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <Link href="/explore" className="text-xs font-semibold text-primary ml-1">View All</Link>
+            </div>
           </div>
           
-          <div className="overflow-x-auto hide-scrollbar px-6 pb-4 -mx-0">
+          <div
+            ref={featuredRef}
+            onScroll={(e) => updateScrollState(e.currentTarget)}
+            className="overflow-x-auto hide-scrollbar px-6 pb-4 -mx-0 scroll-smooth"
+          >
             <div className="flex gap-4 w-max">
               {loadingFeatured ? (
                 Array.from({ length: 3 }).map((_, i) => (

@@ -2,7 +2,7 @@ import https from "https";
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || "dimas.perceka@storify.asia";
-const FROM_NAME = process.env.FROM_NAME || "storify_insight";
+const FROM_NAME = process.env.FROM_NAME || "Storify Insights";
 
 if (!BREVO_API_KEY) {
   console.warn("WARNING: BREVO_API_KEY is not set. Email sending will fail.");

@@ -15,6 +15,7 @@ import Profile from "@/pages/Profile";
 import Subscription from "@/pages/Subscription";
 import SignIn from "@/pages/auth/SignIn";
 import SignUp from "@/pages/auth/SignUp";
+import { usePageViewTracker } from "@/hooks/use-activity";
 
 function Router() {
   return (
@@ -32,16 +33,24 @@ function Router() {
   );
 }
 
+function AppContent() {
+  usePageViewTracker();
+
+  return (
+    <AudioProvider>
+      <Router />
+      <GlobalAudioPlayer />
+      <ListeningLimitModal />
+      <BottomNav />
+      <Toaster />
+    </AudioProvider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AudioProvider>
-        <Router />
-        <GlobalAudioPlayer />
-        <ListeningLimitModal />
-        <BottomNav />
-        <Toaster />
-      </AudioProvider>
+      <AppContent />
     </QueryClientProvider>
   );
 }

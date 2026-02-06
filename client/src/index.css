@@ -8,56 +8,56 @@
   --font-sans: 'DM Sans', sans-serif;
   --font-display: 'Playfair Display', serif;
 
-  /* Rich, warm palette for a premium reading/listening experience */
-  --background: 30 20% 98%;
-  --foreground: 222 47% 11%;
+  /* Ocean-teal palette: #ffffcc #a1dab4 #41b6c4 #2c7fb8 #253494 */
+  --background: 60 100% 99%;
+  --foreground: 231 58% 24%;
   
-  /* Primary: Deep Indigo/Purple */
-  --primary: 262 80% 50%;
-  --primary-foreground: 210 40% 98%;
+  /* Primary: Deep Navy #253494 */
+  --primary: 231 58% 36%;
+  --primary-foreground: 60 100% 97%;
   
-  /* Secondary: Soft Peach/Sand */
-  --secondary: 32 60% 94%;
-  --secondary-foreground: 222 47% 11%;
+  /* Secondary: Soft mint #a1dab4 */
+  --secondary: 149 42% 74%;
+  --secondary-foreground: 231 58% 24%;
   
-  --muted: 215 20% 95%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 150 20% 94%;
+  --muted-foreground: 210 12% 45%;
   
-  --accent: 32 100% 90%;
-  --accent-foreground: 222 47% 11%;
+  --accent: 189 55% 51%;
+  --accent-foreground: 231 58% 24%;
   
   --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 60 100% 97%;
 
-  --border: 214 20% 90%;
-  --input: 214 20% 90%;
-  --ring: 262 80% 50%;
+  --border: 150 18% 88%;
+  --input: 150 18% 88%;
+  --ring: 231 58% 36%;
   
   --radius: 0.75rem;
 }
 
 .dark {
-  --background: 222 47% 8%;
-  --foreground: 210 40% 98%;
+  --background: 231 40% 8%;
+  --foreground: 60 100% 97%;
   
-  --primary: 262 80% 60%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 189 55% 51%;
+  --primary-foreground: 231 58% 12%;
   
-  --secondary: 217 33% 15%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 231 30% 16%;
+  --secondary-foreground: 60 100% 97%;
   
-  --muted: 217 33% 15%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 231 30% 16%;
+  --muted-foreground: 150 15% 65%;
   
-  --accent: 262 50% 20%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 231 58% 25%;
+  --accent-foreground: 60 100% 97%;
   
   --destructive: 0 62% 30%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 60 100% 97%;
   
-  --border: 217 33% 15%;
-  --input: 217 33% 15%;
-  --ring: 262 80% 60%;
+  --border: 231 30% 16%;
+  --input: 231 30% 16%;
+  --ring: 189 55% 51%;
 }
 
 @layer base {
