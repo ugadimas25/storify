@@ -1,70 +1,52 @@
-# 🚀 Panduan Deployment Storify ke Server Tencent
+# 🚀 Panduan Deployment Storify
 
-## 📋 Prerequisites
-
-### Di Server Tencent:
-- Ubuntu 22.04 LTS atau CentOS 8+
-- Node.js 20.x LTS
-- PostgreSQL 14+
-- Nginx
-- Git
-- Certbot (untuk SSL)
+Panduan deployment aplikasi Storify ke server Ubuntu dengan Nginx, PostgreSQL, dan SSL.
 
 ---
 
-## 🖥️ Langkah 1: Setup Server Tencent
+## 📋 Prerequisites
 
-### 1.1 Login ke Server
-```bash
-ssh root@<IP_SERVER_TENCENT>
-```
+- Server Ubuntu 22.04 LTS
+- Domain sudah pointing ke IP server (contoh: storify.asia)
+- Akses SSH ke server
 
-### 1.2 Update System
+---
+
+## 🔧 Langkah 1: Setup Server
+
+### 1.1 Login dan Update Server
 ```bash
-# Ubuntu/Debian
+ssh root@<IP_SERVER>
 apt update && apt upgrade -y
-
-# CentOS/RHEL
-yum update -y
 ```
 
-### 1.3 Install Node.js 20.x
+### 1.2 Install Node.js 20.x
 ```bash
-# Ubuntu/Debian
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 apt install -y nodejs
-
-# Update npm to latest version (required for package aliases)
 npm install -g npm@latest
 
-# Verify installation
-node --version  # Should show v20.x.x
-npm --version   # Should show v10.x.x or higher
+# Verify
+node --version  # v20.x.x
+npm --version   # v10.x.x+
 ```
 
-### 1.4 Install PostgreSQL
+### 1.3 Install PostgreSQL
 ```bash
-# Ubuntu/Debian
 apt install -y postgresql postgresql-contrib
-
-# Start and enable PostgreSQL
 systemctl start postgresql
 systemctl enable postgresql
 ```
 
-### 1.5 Install Nginx
+### 1.4 Install Nginx
 ```bash
-# Ubuntu/Debian
 apt install -y nginx
-
-# Start and enable Nginx
 systemctl start nginx
 systemctl enable nginx
 ```
 
-### 1.6 Install Certbot untuk SSL
+### 1.5 Install Certbot (untuk SSL)
 ```bash
-# Ubuntu/Debian
 apt install -y certbot python3-certbot-nginx
 ```
 
@@ -72,165 +54,84 @@ apt install -y certbot python3-certbot-nginx
 
 ## 🗄️ Langkah 2: Setup Database
 
-### 2.1 Buat Database dan User
 ```bash
 sudo -u postgres psql
 ```
 
 ```sql
--- Buat user
-CREATE USER storify_user WITH PASSWORD 'your_secure_password_here';
-
--- Buat database
+CREATE USER storify_user WITH PASSWORD ''password_aman_anda'';
 CREATE DATABASE storify_db OWNER storify_user;
-
--- Grant privileges
 GRANT ALL PRIVILEGES ON DATABASE storify_db TO storify_user;
-
--- Exit
 \q
-```
-
-### 2.2 Test Koneksi
-```bash
-psql -h localhost -U storify_user -d storify_db
 ```
 
 ---
 
 ## 📁 Langkah 3: Deploy Aplikasi
 
-### 3.1 Buat Direktori Aplikasi
+### 3.1 Clone Repository
 ```bash
-mkdir -p /var/www/storify
-chown -R www-data:www-data /var/www/storify
+mkdir -p /var/www
+cd /var/www
+git clone <REPOSITORY_URL> storify
+cd storify
 ```
 
-### 3.2 Upload Project ke Server
-
-**Opsi A: Via Git (Recommended)**
+### 3.2 Install Dependencies
 ```bash
-cd /var/www/storify
-git clone <YOUR_GIT_REPO_URL> .
-```
-
-**Opsi B: Via SCP dari Local**
-```bash
-# Di komputer local Windows (PowerShell)
-scp -r ./Storify-Insights/* root@<IP_SERVER>:/var/www/storify/
-```
-
-### 3.3 Install Dependencies
-```bash
-cd /var/www/storify
-
-# Install ALL dependencies (including devDependencies)
-# Required for: building, database migrations, TypeScript compilation
 npm ci
-
-# IMPORTANT: Jangan jalankan 'npm prune --production' sebelum db:push!
-# drizzle-kit, tsx, dan TypeScript ada di devDependencies
 ```
 
-### 3.4 Setup Environment Variables
+### 3.3 Setup Environment Variables
 ```bash
-# Copy template
-cp .env.production.example .env
-
-# Edit file
+cp .env.example .env
 nano .env
 ```
 
-Isi `.env`:
+Edit file `.env`:
 ```env
-DATABASE_URL=postgresql://storify_user:your_secure_password@localhost:5432/storify_db
-SESSION_SECRET=generate-random-64-character-string-here
-PORT=5000
 NODE_ENV=production
-DOMAIN=storify.asia
+PORT=5001
 
-# Xendit Configuration
-XENDIT_SECRET_KEY=xnd_production_YOUR_KEY_HERE
-XENDIT_WEBHOOK_TOKEN=generate-random-webhook-token-here
-XENDIT_PUBLIC_KEY=xnd_public_production_YOUR_KEY_HERE
-APP_URL=https://storify.asia
+# Database
+DATABASE_URL=postgresql://storify_user:password_aman_anda@localhost:5432/storify_db
+
+# Xendit (Production Keys dari dashboard.xendit.co)
+XENDIT_SECRET_KEY=xnd_production_your_key_here
+XENDIT_PUBLIC_KEY=xnd_public_production_your_key_here
+
+# Webhook (generate dengan: openssl rand -hex 32)
+WEBHOOK_TOKEN=your_webhook_token_here
+
+# Session
+SESSION_SECRET=your_session_secret_here
 ```
 
-**Generate Random Secrets:**
+### 3.4 Setup Database Schema
 ```bash
-# Session Secret
-openssl rand -hex 32
-
-# Webhook Token (simpan untuk configure di Xendit Dashboard)
-openssl rand -hex 32
-```
-
-### 3.5 Push Database Schema
-```bash
-cd /var/www/storify
 npm run db:push
 ```
 
-### 3.6 Build Production
+### 3.5 Build Application
 ```bash
 npm run build
 
-# Optional: Remove devDependencies after build to save disk space
-# HANYA jalankan setelah db:push dan build selesai!
-# npm prune --production
+# Verify build berhasil
+ls -la dist/index.cjs
+ls -la dist/public/
 ```
 
 ---
 
-## 🌐 Langkah 4: Setup DNS
+## 🌐 Langkah 4: Setup Nginx
 
-### 4.1 Di Tencent Cloud DNS atau Domain Registrar
-
-Tambahkan A Record:
-```
-Type: A
-Name: @
-Value: <IP_SERVER_TENCENT>
-TTL: 600
-```
-
-Domain yang dihasilkan: `storify.asia`
-
-**Catatan:** Gunakan `@` untuk root domain (storify.asia) atau `www` untuk subdomain (www.storify.asia)
-
----
-
-## 🔐 Langkah 5: Setup SSL dengan Certbot
-
-### 5.1 Generate SSL Certificate
+### 4.1 Buat Konfigurasi Nginx
 ```bash
-certbot certonly --nginx -d storify.asia -d www.storify.asia
+nano /etc/nginx/sites-available/storify
 ```
 
-Atau jika nginx belum dikonfigurasi:
-```bash
-certbot certonly --standalone -d storify.asia -d www.storify.asia
-```
-
-### 5.2 Auto-Renewal
-```bash
-# Test renewal
-certbot renew --dry-run
-
-# Certbot otomatis menambahkan cron job untuk renewal
-```
-
----
-
-## ⚙️ Langkah 6: Konfigurasi Nginx
-
-### 6.1 Copy Konfigurasi
-```bash
-# Jika file deploy/nginx/storify.conf ada di project
-cp /var/www/storify/deploy/nginx/storify.conf /etc/nginx/sites-available/storify
-
-# Jika file tidak ada, buat manual:
-cat > /etc/nginx/sites-available/storify << 'EOF'
+Paste konfigurasi berikut:
+```nginx
 server {
     listen 80;
     server_name storify.asia www.storify.asia;
@@ -239,336 +140,285 @@ server {
     error_log /var/log/nginx/storify-error.log;
 
     location / {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:5001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_set_header Connection ''upgrade'';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
     }
 }
-EOF
 ```
 
-### 6.2 Enable Site
+### 4.2 Enable Site dan Test
 ```bash
-# Ubuntu/Debian
-ln -sf /etc/nginx/sites-available/storify /etc/nginx/sites-enabled/storify
-```
-
-### 6.3 Test dan Reload Nginx
-```bash
+ln -s /etc/nginx/sites-available/storify /etc/nginx/sites-enabled/
 nginx -t
 systemctl reload nginx
 ```
 
 ---
 
-## 🔄 Langkah 7: Setup Systemd Service
+## 🔐 Langkah 5: Setup SSL dengan Certbot
 
-### 7.1 Copy Service File
 ```bash
-cp /var/www/storify/deploy/systemd/storify.service /etc/systemd/system/
+certbot --nginx -d storify.asia -d www.storify.asia
 ```
 
-### 7.2 Enable dan Start Service
+Ikuti instruksi interaktif. Certbot akan otomatis:
+- Generate SSL certificate
+- Update konfigurasi Nginx
+- Setup auto-renewal
+
+---
+
+## 🔄 Langkah 6: Setup Systemd Service
+
+### 6.1 Buat Service File
 ```bash
-# Reload systemd
+nano /etc/systemd/system/storify.service
+```
+
+Paste konfigurasi berikut:
+```ini
+[Unit]
+Description=Storify Insights Application
+Documentation=https://storify.asia
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/storify
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /var/www/storify/dist/index.cjs
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=storify
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### 6.2 Set Permissions
+```bash
+chown -R www-data:www-data /var/www/storify
+```
+
+### 6.3 Start Service
+```bash
 systemctl daemon-reload
-
-# Enable service (start on boot)
 systemctl enable storify
-
-# Start service
 systemctl start storify
-
-# Check status
 systemctl status storify
 ```
 
-### 7.3 View Logs
-```bash
-# Real-time logs
-journalctl -u storify -f
-
-# Last 100 lines
-journalctl -u storify -n 100
-```
-
 ---
 
-## ✅ Langkah 8: Verifikasi Deployment
+## ✅ Langkah 7: Verifikasi
 
-### 8.1 Test Health Check
+### 7.1 Test API
 ```bash
-curl http://localhost:5000/api/books
-```
-
-### 8.2 Test via Domain
-```bash
+curl http://localhost:5001/api/books
 curl https://storify.asia/api/books
 ```
 
-### 8.3 Buka di Browser
-Akses: https://storify.asia
+### 7.2 Buka di Browser
+```
+https://storify.asia
+```
 
 ---
 
-## � Langkah 9: Setup Xendit Webhook
+## 🔄 Langkah 8: Setup Xendit Webhook
 
-### 10.1 Login ke Xendit Dashboard
-Buka: https://dashboard.xendit.co/
+1. Login ke [Xendit Dashboard](https://dashboard.xendit.co/)
+2. Pergi ke **Settings → Developers → Callbacks**
+3. Klik **Create New Webhook**
+4. Isi form:
+   - **Webhook URL**: `https://storify.asia/api/webhook/xendit`
+   - **Events**: Centang `invoice.paid` dan `invoice.expired`
+   - **Verification Token**: Paste token dari `.env` file
+5. Klik **Save**
 
-### 9.2 Get API Keys
-```
-Settings → Developers → API Keys
-
-Mode Production (Live):
-- Secret Key: xnd_production_...
-- Public Key: xnd_public_production_...
-
-Mode Development (Test):
-- Secret Key: xnd_development_...
-- Public Key: xnd_public_development_...
-```
-
-Copy keys ke file `.env` di server
-
-### 9.3 Configure Webhook
-```
-Settings → Developers → Callbacks → Create New Webhook
-
-Webhook URL:
-https://storify.asia/api/webhook/xendit
-
-Events:
-✅ invoice.paid
-✅ invoice.expired
-
-Verification Token:
-[Paste token dari .env file yang sudah di-generate dengan openssl rand -hex 32]
-```
-
-### 9.4 Test Webhook (Optional)
-Di Xendit Dashboard, ada tombol "Test Webhook" untuk mengirim sample payload.
-
-Atau manual test:
+### Test Webhook
 ```bash
 curl -X POST https://storify.asia/api/webhook/xendit \
   -H "Content-Type: application/json" \
   -H "x-callback-token: YOUR_WEBHOOK_TOKEN" \
-  -d '{
-    "external_id": "test-123",
-    "status": "PAID",
-    "payment_method": "EWALLET",
-    "payment_channel": "GOPAY"
-  }'
-```
-
-### 9.5 Monitor Webhook Logs
-```bash
-# Real-time monitoring
-journalctl -u storify -f | grep webhook
-
-# Check recent webhook calls
-journalctl -u storify -n 100 | grep webhook
+  -d ''{"external_id":"test-123","status":"PAID"}''
 ```
 
 ---
 
-## 🔒 Langkah 10: Security Hardening
+## 🔄 Update/Redeploy
 
-### 9.1 Setup Firewall (UFW)
-```bash
-# Ubuntu
-ufw allow 22/tcp    # SSH
-ufw allow 80/tcp    # HTTP
-ufw allow 443/tcp   # HTTPS
-ufw enable
-ufw status
-```
+Buat script update di `/var/www/storify/deploy.sh`:
 
-### 10.2 Tencent Cloud Security Group
-Di Console Tencent Cloud, pastikan Security Group mengizinkan:
-- Inbound: 22 (SSH), 80 (HTTP), 443 (HTTPS)
-- Outbound: All
-
----
-
-## 🔄 Langkah 11: Update/Redeploy
-
-### Script Update
 ```bash
 #!/bin/bash
 cd /var/www/storify
 
-# Pull latest code
+echo "📥 Pulling latest code..."
 git pull origin main
 
-# Install all dependencies (including dev)
+echo "📦 Installing dependencies..."
 npm ci
 
-# Push database schema (needs drizzle-kit from devDependencies)
+echo "🗄️ Updating database schema..."
 npm run db:push
 
-# Build application (rebuild frontend routes)
+echo "🔨 Building application..."
 npm run build
 
-# Restart service
+echo "🔄 Restarting service..."
 systemctl restart storify
 
 echo "✅ Deployment complete!"
+systemctl status storify
 ```
 
-Simpan sebagai `/var/www/storify/deploy.sh` dan jalankan:
+Jalankan:
 ```bash
 chmod +x /var/www/storify/deploy.sh
 ./deploy.sh
 ```
 
-### Troubleshooting: Page Not Found untuk routes baru
-
-```bash
-# Setelah menambahkan routes baru (seperti /auth/signin, /auth/signup)
-# Pastikan rebuild aplikasi:
-
-cd /var/www/storify
-npm run build
-systemctl restart storify
-
-# Verify routing works:
-curl http://localhost:5000/auth/signin
-# Should return HTML, not 404
-```
-
 ---
 
-## 📊 Langkah 12: Monitoring
+## 📊 Monitoring
 
-### Check App Status
+### View Application Logs
+```bash
+journalctl -u storify -f
+journalctl -u storify -n 100
+```
+
+### View Nginx Logs
+```bash
+tail -f /var/log/nginx/storify-access.log
+tail -f /var/log/nginx/storify-error.log
+```
+
+### Check Status
 ```bash
 systemctl status storify
-```
-
-### Check Nginx Status
-```bash
 systemctl status nginx
-```
-
-### Check Database
-```bash
-sudo -u postgres psql -c "SELECT datname, numbackends FROM pg_stat_database WHERE datname = 'storify_db';"
-```
-
-### Memory Usage
-```bash
-free -h
-```
-
-### Disk Usage
-```bash
-df -h
+systemctl status postgresql
 ```
 
 ---
 
 ## 🆘 Troubleshooting
 
-### App tidak start
+### 1. Build Gagal: "Cannot find module tsx"
 ```bash
-journalctl -u storify -n 50 --no-pager
+cd /var/www/storify
+npm ci
+npm run build
 ```
 
-### Nginx error
+### 2. Service Tidak Start: "Cannot find module dist/index.cjs"
 ```bash
-nginx -t
-tail -f /var/log/nginx/error.log
+cd /var/www/storify
+npm run build
+ls -la dist/index.cjs
+systemctl restart storify
 ```
 
-### Database connection error
+### 3. Database Connection Error
 ```bash
-# Test connection
-psql -h localhost -U storify_user -d storify_db -c "SELECT 1"
+# Test koneksi database
+psql -h localhost -U storify_user -d storify_db
 
-# Check PostgreSQL status
+# Cek PostgreSQL berjalan
 systemctl status postgresql
 ```
 
-### Port sudah dipakai
+### 4. Port 5001 Sudah Dipakai
 ```bash
-lsof -i :5000
+# Cari process yang pakai port 5001
+lsof -i :5001
+
+# Kill process
 kill -9 <PID>
 ```
 
-### drizzle-kit: not found
+### 5. Nginx Error
 ```bash
-# Install semua dependencies (termasuk devDependencies)
-cd /var/www/storify
-rm -rf node_modules package-lock.json
-npm install
+# Test konfigurasi
+nginx -t
 
-# Atau gunakan npm ci untuk instalasi bersih
-npm ci
+# Reload Nginx
+systemctl reload nginx
 
-# Verify drizzle-kit installed
-npx drizzle-kit --version
+# Check logs
+tail -50 /var/log/nginx/error.log
 ```
 
-### npm run db:push error
-```bash
-# Pastikan devDependencies terinstall
-npm list drizzle-kit
+### 6. Fix: useNavigate is not exported by wouter
+Wouter menggunakan `useLocation` bukan `useNavigate`:
+```tsx
+// Salah ❌
+import { useNavigate } from "wouter";
+const [, setLocation] = useNavigate();
 
-# Jika tidak ada, install ulang semua dependencies
-npm ci
-
-# Jalankan db:push
-npm run db:push
-```
-
-### npm ERR! Invalid comparator: npm:tsx
-```bash
-# Update npm ke versi terbaru
-npm install -g npm@latest
-npm --version  # Should be 10.x or higher
+// Benar ✅
+import { useLocation } from "wouter";
+const [, setLocation] = useLocation();
 ```
 
 ---
 
-## 📝 Quick Commands Reference
+## 📝 Quick Commands
 
 ```bash
-# Restart App
+# Restart aplikasi
 systemctl restart storify
 
-# Restart Nginx
+# Reload Nginx
 systemctl reload nginx
 
-# View App Logs
+# View logs real-time
 journalctl -u storify -f
 
-# View Nginx Logs
-tail -f /var/log/nginx/access.log
-tail -f /var/log/nginx/error.log
-
-# Database Shell
+# Database shell
 psql -h localhost -U storify_user -d storify_db
 
-# SSL Renewal
+# SSL renewal (otomatis via cron, atau manual)
 certbot renew
+
+# Check disk space
+df -h
+
+# Check memory
+free -h
 ```
+
+---
+
+## 🔒 Security Checklist
+
+- [ ] Firewall enabled (ufw enable)
+- [ ] Hanya port 22, 80, 443 terbuka
+- [ ] SSL certificate valid
+- [ ] Database password kuat
+- [ ] Environment variables aman (tidak di-commit ke git)
+- [ ] Webhook token aman
+- [ ] Session secret random dan panjang
+- [ ] Backup database regular
 
 ---
 
 ## 🎉 Selesai!
 
-Aplikasi Storify sekarang berjalan di:
-**https://storify.asia**
+Aplikasi Storify sekarang berjalan di: **https://storify.asia**
 
+Untuk bantuan lebih lanjut, check:
+- Application logs: `journalctl -u storify -f`
+- Nginx logs: `tail -f /var/log/nginx/storify-error.log`
