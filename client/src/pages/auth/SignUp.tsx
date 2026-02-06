@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Mail, ArrowRight, RefreshCw } from "lucide-react";
 
 export default function SignUp() {
   const [name, setName] = useState("");
@@ -12,6 +13,8 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [resending, setResending] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -51,12 +54,9 @@ export default function SignUp() {
         throw new Error(data.message || "Sign up failed");
       }
 
-      toast({
-        title: "Success!",
-        description: "Your account has been created.",
-      });
-
-      setLocation("/");
+      if (data.requiresVerification) {
+        setVerificationSent(true);
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -68,17 +68,77 @@ export default function SignUp() {
     }
   };
 
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      const response = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      toast({
+        title: "Berhasil",
+        description: data.message,
+      });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal mengirim ulang email verifikasi",
+      });
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // Verification sent state
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 px-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader className="pb-4">
+            <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-3">
+              <Mail className="w-8 h-8 text-purple-600" />
+            </div>
+            <CardTitle className="text-xl">Cek Email Anda</CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Kami telah mengirim link verifikasi ke<br />
+              <span className="font-semibold text-foreground">{email}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Klik link di email untuk mengaktifkan akun Anda.
+              Cek juga folder spam jika tidak menemukan email.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" onClick={handleResend} disabled={resending} className="w-full">
+                <RefreshCw className={`w-4 h-4 mr-2 ${resending ? "animate-spin" : ""}`} />
+                {resending ? "Mengirim..." : "Kirim Ulang Email"}
+              </Button>
+              <Button onClick={() => setLocation("/auth/signin")} className="w-full">
+                Ke Halaman Login
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Sign Up</CardTitle>
-          <CardDescription>Create your Storify account</CardDescription>
+          <CardTitle>Daftar Akun</CardTitle>
+          <CardDescription>Buat akun Storify Insights Anda</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">Nama Lengkap</Label>
               <Input
                 id="name"
                 type="text"
@@ -93,7 +153,7 @@ export default function SignUp() {
               <Input
                 id="email"
                 type="email"
-                placeholder="your@email.com"
+                placeholder="email@contoh.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -112,7 +172,7 @@ export default function SignUp() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -123,14 +183,14 @@ export default function SignUp() {
                 minLength={6}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Sign Up"}
+            <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700" disabled={isLoading}>
+              {isLoading ? "Membuat akun..." : "Daftar"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link href="/auth/signin" className="text-blue-600 hover:underline">
-              Sign in
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            Sudah punya akun?{" "}
+            <Link href="/auth/signin" className="text-primary hover:underline font-medium">
+              Masuk
             </Link>
           </p>
         </CardContent>

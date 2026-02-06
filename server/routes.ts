@@ -1,12 +1,48 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { api } from "@shared/routes";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth/index";
 import { z } from "zod";
 import { users, sessions } from "@db/schema";
 import { hashPassword, verifyPassword, generateSessionId } from "./auth";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
+import { sendVerificationEmail } from "./email";
+
+// Extend express-session types
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+    sessionId: string;
+    user: {
+      id: string;
+      email: string | null;
+      name: string | null;
+      firstName: string | null;
+      lastName: string | null;
+      profileImageUrl: string | null;
+    };
+  }
+}
+
+// HTML page for email verification result
+function verificationResultPage(success: boolean, message: string): string {
+  const icon = success ? "✅" : "❌";
+  const color = success ? "#7c3aed" : "#dc2626";
+  const btnText = success ? "Login Sekarang" : "Kembali ke Beranda";
+  const btnHref = success ? "/auth/signin" : "/";
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verifikasi Email - Storify</title></head>
+<body style="margin:0;padding:0;background:#f4f0ff;font-family:'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">
+<div style="max-width:400px;margin:20px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(88,28,135,0.08);text-align:center;padding:40px 24px;">
+<div style="font-size:48px;margin-bottom:16px;">${icon}</div>
+<h1 style="color:${color};font-size:20px;margin:0 0 12px;">${success ? "Berhasil!" : "Gagal"}</h1>
+<p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 24px;">${message}</p>
+<a href="${btnHref}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-size:14px;font-weight:600;">${btnText}</a>
+</div></body></html>`;
+}
 
 async function seedDatabase() {
   const books = await storage.getBooks();
@@ -421,10 +457,30 @@ export async function registerRoutes(
         .limit(1);
 
       if (existingUser.length > 0) {
+        // If exists but not verified, resend verification
+        if (!existingUser[0].emailVerified) {
+          const token = randomBytes(32).toString("hex");
+          const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
+          await db.update(users)
+            .set({ verificationToken: token, verificationExpires: expires })
+            .where(eq(users.id, existingUser[0].id));
+
+          await sendVerificationEmail(email, name, token);
+
+          return res.json({
+            message: "Verification email resent. Please check your inbox.",
+            requiresVerification: true,
+          });
+        }
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      // Hash password and create user
+      // Generate verification token
+      const verificationToken = randomBytes(32).toString("hex");
+      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
+      // Hash password and create user (unverified)
       const hashedPassword = await hashPassword(password);
       const [newUser] = await db
         .insert(users)
@@ -432,28 +488,104 @@ export async function registerRoutes(
           email,
           password: hashedPassword,
           name,
+          firstName: name.split(" ")[0],
+          lastName: name.split(" ").slice(1).join(" ") || null,
+          emailVerified: false,
+          verificationToken,
+          verificationExpires,
         })
         .returning();
 
-      // Create session
-      const sessionId = generateSessionId();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      // Send verification email
+      const emailSent = await sendVerificationEmail(email, name, verificationToken);
 
-      await db.insert(sessions).values({
-        id: sessionId,
-        userId: newUser.id,
-        expiresAt,
-      });
-
-      req.session.userId = newUser.id;
-      req.session.sessionId = sessionId;
+      if (!emailSent) {
+        console.error("Failed to send verification email to:", email);
+      }
 
       res.json({
-        message: "Sign up successful",
-        user: { id: newUser.id, email: newUser.email, name: newUser.name },
+        message: "Akun berhasil dibuat! Silakan cek email Anda untuk verifikasi.",
+        requiresVerification: true,
       });
     } catch (error) {
       console.error("Sign up error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Email Verification Route
+  app.get("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { token } = req.query;
+
+      if (!token || typeof token !== "string") {
+        return res.status(400).send(verificationResultPage(false, "Token tidak valid."));
+      }
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.verificationToken, token))
+        .limit(1);
+
+      if (!user) {
+        return res.status(400).send(verificationResultPage(false, "Token tidak ditemukan atau sudah digunakan."));
+      }
+
+      if (user.verificationExpires && user.verificationExpires < new Date()) {
+        return res.status(400).send(verificationResultPage(false, "Token sudah kedaluwarsa. Silakan daftar ulang."));
+      }
+
+      // Mark email as verified
+      await db.update(users)
+        .set({
+          emailVerified: true,
+          verificationToken: null,
+          verificationExpires: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
+      // Redirect to signin page with success
+      return res.send(verificationResultPage(true, "Email berhasil diverifikasi! Anda sekarang bisa login."));
+    } catch (error) {
+      console.error("Email verification error:", error);
+      res.status(500).send(verificationResultPage(false, "Terjadi kesalahan. Silakan coba lagi."));
+    }
+  });
+
+  // Resend Verification Email
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+      if (!user) {
+        // Don't reveal if email exists
+        return res.json({ message: "Jika email terdaftar, kami akan mengirim ulang link verifikasi." });
+      }
+
+      if (user.emailVerified) {
+        return res.json({ message: "Email sudah terverifikasi. Silakan login." });
+      }
+
+      const token = randomBytes(32).toString("hex");
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await db.update(users)
+        .set({ verificationToken: token, verificationExpires: expires })
+        .where(eq(users.id, user.id));
+
+      await sendVerificationEmail(email, user.name || "User", token);
+
+      res.json({ message: "Link verifikasi telah dikirim ulang ke email Anda." });
+    } catch (error) {
+      console.error("Resend verification error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -475,27 +607,36 @@ export async function registerRoutes(
         .limit(1);
 
       if (!user) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        return res.status(401).json({ message: "Email atau password salah" });
       }
 
       // Verify password
+      if (!user.password) {
+        return res.status(401).json({ message: "Email atau password salah" });
+      }
       const isValid = await verifyPassword(user.password, password);
       if (!isValid) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        return res.status(401).json({ message: "Email atau password salah" });
       }
 
-      // Create session
-      const sessionId = generateSessionId();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      // Check email verification
+      if (!user.emailVerified) {
+        return res.status(403).json({
+          message: "Email belum diverifikasi. Silakan cek inbox Anda.",
+          requiresVerification: true,
+          email: user.email,
+        });
+      }
 
-      await db.insert(sessions).values({
-        id: sessionId,
-        userId: user.id,
-        expiresAt,
-      });
-
-      req.session.userId = user.id;
-      req.session.sessionId = sessionId;
+      // Store user in session (compatible with auth/index.ts /api/auth/user)
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+      };
 
       res.json({
         message: "Sign in successful",
@@ -510,9 +651,6 @@ export async function registerRoutes(
   // Sign Out Route
   app.post("/api/auth/signout", async (req, res) => {
     try {
-      if (req.session.sessionId) {
-        await db.delete(sessions).where(eq(sessions.id, req.session.sessionId));
-      }
       req.session.destroy((err) => {
         if (err) {
           console.error("Session destroy error:", err);
@@ -525,10 +663,11 @@ export async function registerRoutes(
     }
   });
 
-  // Get Current User Route
+  // Get Current User Route (unused — /api/auth/user in auth/index.ts is the real one)
   app.get("/api/auth/me", async (req, res) => {
     try {
-      if (!req.session.userId) {
+      const sessionUser = req.session.user;
+      if (!sessionUser) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
@@ -537,16 +676,19 @@ export async function registerRoutes(
           id: users.id,
           email: users.email,
           name: users.name,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
         })
         .from(users)
-        .where(eq(users.id, req.session.userId))
+        .where(eq(users.id, sessionUser.id))
         .limit(1);
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      res.json({ user });
+      res.json(user);
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ message: "Internal server error" });

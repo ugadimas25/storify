@@ -5,7 +5,7 @@ import { BookCard } from "@/components/BookCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
-import { Bell, Search, Play, ChevronRight } from "lucide-react";
+import { Search, Play, ChevronRight, Headphones, BookOpen, Sparkles, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Book } from "@shared/schema";
@@ -42,48 +42,139 @@ export default function Home() {
 
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
+    if (hour < 12) return "Selamat pagi";
+    if (hour < 18) return "Selamat siang";
+    return "Selamat malam";
   };
 
   const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+    <div className="min-h-screen bg-background pb-24">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-20 pb-32">
-        <div className="flex gap-4 justify-center">
+      <section className="relative overflow-hidden">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-700" />
+        {/* Decorative circles */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-purple-400/20 rounded-full blur-2xl" />
+        <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-blue-400/15 rounded-full blur-2xl" />
+
+        <div className="relative px-6 pt-12 pb-8">
           {user ? (
-            <Button
-              size="lg"
-              onClick={() => setLocation("/dashboard")}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            /* Logged-in hero */
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
             >
-              Go to Dashboard
-            </Button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/70 text-sm font-medium">{getTimeGreeting()} 👋</p>
+                  <h1 className="text-2xl font-bold text-white mt-1">
+                    {user.firstName || 'Reader'}
+                  </h1>
+                </div>
+                <button
+                  onClick={() => setLocation("/explore")}
+                  className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center"
+                >
+                  <Search className="w-5 h-5 text-white" />
+                </button>
+              </div>
+
+              {/* Quick stats bar */}
+              <div className="flex gap-3 mt-4">
+                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
+                  <Headphones className="w-5 h-5 text-white/80 mx-auto mb-1" />
+                  <p className="text-xs text-white/60">Listening</p>
+                  <p className="text-lg font-bold text-white">{recentlyPlayed?.length || 0}</p>
+                </div>
+                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
+                  <BookOpen className="w-5 h-5 text-white/80 mx-auto mb-1" />
+                  <p className="text-xs text-white/60">Library</p>
+                  <p className="text-lg font-bold text-white">{allBooks?.length || 0}</p>
+                </div>
+                <div
+                  className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center cursor-pointer hover:bg-white/20 transition-colors"
+                  onClick={() => setLocation("/explore")}
+                >
+                  <Sparkles className="w-5 h-5 text-yellow-300 mx-auto mb-1" />
+                  <p className="text-xs text-white/60">Explore</p>
+                  <p className="text-lg font-bold text-white">
+                    <ArrowRight className="w-5 h-5 mx-auto" />
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           ) : (
-            <>
-              <Button
-                size="lg"
-                onClick={() => setLocation("/auth/signin")}
-                variant="outline"
-              >
-                Sign In
-              </Button>
-              <Button
-                size="lg"
-                onClick={() => setLocation("/auth/signup")}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              >
-                Sign Up
-              </Button>
-            </>
+            /* Guest hero */
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center space-y-5"
+            >
+              {/* Logo / Brand */}
+              <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 mx-auto">
+                <Headphones className="w-4 h-4 text-yellow-300" />
+                <span className="text-sm font-semibold text-white">Storify Insights</span>
+              </div>
+
+              <div className="space-y-3">
+                <h1 className="text-3xl font-bold text-white leading-tight">
+                  Dengarkan Ringkasan<br />
+                  <span className="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">
+                    Buku Terbaik
+                  </span>
+                </h1>
+                <p className="text-white/70 text-sm max-w-xs mx-auto leading-relaxed">
+                  Akses ratusan ringkasan audiobook kapan saja, di mana saja. Belajar lebih cepat, lebih cerdas.
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-center pt-2">
+                <Button
+                  size="lg"
+                  onClick={() => setLocation("/auth/signin")}
+                  variant="outline"
+                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white rounded-xl px-6 backdrop-blur-sm"
+                >
+                  Masuk
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => setLocation("/auth/signup")}
+                  className="bg-white text-purple-700 hover:bg-white/90 rounded-xl px-6 font-semibold shadow-lg shadow-black/10"
+                >
+                  Daftar Gratis
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+
+              {/* Trust badge */}
+              <div className="flex items-center justify-center gap-1.5 pt-1">
+                <div className="flex -space-x-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="w-6 h-6 rounded-full bg-white/20 border-2 border-purple-600 flex items-center justify-center">
+                      <span className="text-[8px] text-white font-bold">{['A', 'R', 'M'][i-1]}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-white/60 ml-1">Bergabung dengan 1000+ pembaca</p>
+              </div>
+            </motion.div>
           )}
+        </div>
+
+        {/* Curved bottom edge */}
+        <div className="relative h-6">
+          <svg viewBox="0 0 1440 48" fill="none" className="absolute bottom-0 w-full" preserveAspectRatio="none">
+            <path d="M0 48h1440V0C1200 40 240 40 0 0v48z" className="fill-background" />
+          </svg>
         </div>
       </section>
 
-      <main className="space-y-8 pt-4">
+      <main className="space-y-8 pt-2">
         {/* Continue Listening Section - Only show if user has recently played books */}
         {user && recentlyPlayed && recentlyPlayed.length > 0 && (
           <section>
