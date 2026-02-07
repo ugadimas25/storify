@@ -1,6 +1,9 @@
+import 'dotenv/config';
 import XLSX from 'xlsx';
 import { db } from '../server/db';
 import { books } from '../shared/schema';
+import { getCOSUrl } from '../server/cos';
+import fs from 'fs';
 
 // Kategori mapping berdasarkan kata kunci di judul
 const categoryKeywords: Record<string, string[]> = {
@@ -165,6 +168,133 @@ function getRandomDuration(): number {
 // Track imported titles to avoid duplicates
 const importedTitles = new Set<string>();
 
+// Audio mapping from COS upload report
+interface AudioMapping {
+  [key: string]: string; // normalized filename → COS URL
+}
+
+let audioMapping: AudioMapping = {};
+
+/**
+ * Load audio URL mapping from upload report
+ */
+function loadAudioMapping(): AudioMapping {
+  const reportPath = 'audio-upload-report.json';
+  const mapping: AudioMapping = {};
+  
+  try {
+    if (!fs.existsSync(reportPath)) {
+      console.warn('⚠️  Audio upload report not found. Using dummy audio URLs.');
+      return mapping;
+    }
+    
+    const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+    
+    for (const result of report.results) {
+      if (result.status === 'success') {
+        // Normalize filename for matching
+        const normalized = normalizeForMatching(result.filename);
+        mapping[normalized] = result.cosUrl;
+      }
+    }
+    
+    console.log(`✓ Loaded ${Object.keys(mapping).length} audio URLs from COS\n`);
+  } catch (error) {
+    console.warn('⚠️  Failed to load audio mapping:', error);
+  }
+  
+  return mapping;
+}
+
+/**
+ * Normalize filename for fuzzy matching
+ * Removes extensions, special chars, numbers, lowercases
+ */
+function normalizeForMatching(filename: string): string {
+  return filename
+    .toLowerCase()
+    .replace(/\.pdf$/i, '')
+    .replace(/\.wav$/i, '')
+    .replace(/\.mp3$/i, '')
+    .replace(/_essential_info/g, '')
+    .replace(/[^a-z0-9]+/g, '')
+    .trim();
+}
+
+/**
+ * Find matching audio URL for a PDF filename
+ */
+function findAudioUrl(pdfFilename: string): string {
+  const normalized = normalizeForMatching(pdfFilename);
+  
+  // Direct match
+  if (audioMapping[normalized]) {
+    return audioMapping[normalized];
+  }
+  
+  // Fuzzy match - find best match by string similarity
+  let bestMatch = '';
+  let bestScore = 0;
+  
+  for (const [audioKey, audioUrl] of Object.entries(audioMapping)) {
+    const score = stringSimilarity(normalized, audioKey);
+    if (score > bestScore && score > 0.6) { // 60% similarity threshold
+      bestScore = score;
+      bestMatch = audioUrl;
+    }
+  }
+  
+  if (bestMatch) {
+    return bestMatch;
+  }
+  
+  // Fallback to dummy URL
+  const randomIndex = Math.floor(Math.random() * 16) + 1;
+  return `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${randomIndex}.mp3`;
+}
+
+/**
+ * Calculate string similarity (0-1)
+ * Using Levenshtein distance based approach
+ */
+function stringSimilarity(s1: string, s2: string): number {
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  
+  if (longer.length === 0) return 1.0;
+  
+  // Check if shorter is a substring of longer
+  if (longer.includes(shorter)) {
+    return 0.8; // High score for substring match
+  }
+  
+  // Check common prefix length
+  let commonPrefix = 0;
+  const minLen = Math.min(s1.length, s2.length);
+  for (let i = 0; i < minLen; i++) {
+    if (s1[i] === s2[i]) {
+      commonPrefix++;
+    } else {
+      break;
+    }
+  }
+  
+  if (commonPrefix > 10) {
+    return 0.7; // Good match if significant prefix matches
+  }
+  
+  // Count common characters
+  const s1Chars = new Set(s1.split(''));
+  const s2Chars = new Set(s2.split(''));
+  let common = 0;
+  
+  for (const char of s1Chars) {
+    if (s2Chars.has(char)) common++;
+  }
+  
+  return common / Math.max(s1Chars.size, s2Chars.size);
+}
+
 async function importFromFile(filepath: string) {
   console.log(`\nReading ${filepath}...`);
   const wb = XLSX.readFile(filepath);
@@ -210,7 +340,7 @@ async function importFromFile(filepath: string) {
       author,
       description: `Buku "${title}" karya ${author}. Kategori: ${category}.`,
       coverUrl: getCoverUrl(category),
-      audioUrl: `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${(imported % 16) + 1}.mp3`,
+      audioUrl: findAudioUrl(filename), // Match with COS audio files
       duration: getRandomDuration(),
       category,
       isFeatured,
@@ -234,6 +364,9 @@ async function importFromFile(filepath: string) {
 
 async function importBooks() {
   console.log('=== Starting Book Import ===\n');
+  
+  // Load audio mapping from COS upload report
+  audioMapping = loadAudioMapping();
   
   const files = ['ref/list_nama_pdf.xlsx'];
   

@@ -1,0 +1,186 @@
+{
+  "date": "2026-02-07T23:11:36.681Z",
+  "sourceDirectory": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output",
+  "totalFiles": 22,
+  "success": 22,
+  "skipped": 0,
+  "failed": 0,
+  "results": [
+    {
+      "filename": "108_ Menikah Sehat dan Islami_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\108_ Menikah Sehat dan Islami_essential_info.wav",
+      "cosKey": "audio/108_ Menikah Sehat dan Islami_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/108_ Menikah Sehat dan Islami_essential_info.wav",
+      "fileSize": 11939628,
+      "status": "success"
+    },
+    {
+      "filename": "1248_ The Art of Public Speaking The Original Tool_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\1248_ The Art of Public Speaking The Original Tool_essential_info.wav",
+      "cosKey": "audio/1248_ The Art of Public Speaking The Original Tool_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/1248_ The Art of Public Speaking The Original Tool_essential_info.wav",
+      "fileSize": 10351820,
+      "status": "success"
+    },
+    {
+      "filename": "128-Article Text-1165-1-10-20201215_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\128-Article Text-1165-1-10-20201215_essential_info.wav",
+      "cosKey": "audio/128-Article Text-1165-1-10-20201215_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/128-Article Text-1165-1-10-20201215_essential_info.wav",
+      "fileSize": 5441196,
+      "status": "success"
+    },
+    {
+      "filename": "16-05-2021-070111The-Richest-Man-in-Babylon_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\16-05-2021-070111The-Richest-Man-in-Babylon_essential_info.wav",
+      "cosKey": "audio/16-05-2021-070111The-Richest-Man-in-Babylon_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/16-05-2021-070111The-Richest-Man-in-Babylon_essential_info.wav",
+      "fileSize": 5172332,
+      "status": "success"
+    },
+    {
+      "filename": "1762_ Master Your Emotions A b_indonesia_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\1762_ Master Your Emotions A b_indonesia_essential_info.wav",
+      "cosKey": "audio/1762_ Master Your Emotions A b_indonesia_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/1762_ Master Your Emotions A b_indonesia_essential_info.wav",
+      "fileSize": 17227468,
+      "status": "success"
+    },
+    {
+      "filename": "1_453_ Pernikahan wanita hamil akibat zina_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\1_453_ Pernikahan wanita hamil akibat zina_essential_info.wav",
+      "cosKey": "audio/1_453_ Pernikahan wanita hamil akibat zina_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/1_453_ Pernikahan wanita hamil akibat zina_essential_info.wav",
+      "fileSize": 6953612,
+      "status": "success"
+    },
+    {
+      "filename": "243__Baca_Buku_Ini_Saat_Engkau_Lelah_-_Munita_Yeni_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\243__Baca_Buku_Ini_Saat_Engkau_Lelah_-_Munita_Yeni_essential_info.wav",
+      "cosKey": "audio/243__Baca_Buku_Ini_Saat_Engkau_Lelah_-_Munita_Yeni_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/243__Baca_Buku_Ini_Saat_Engkau_Lelah_-_Munita_Yeni_essential_info.wav",
+      "fileSize": 402540,
+      "status": "success"
+    },
+    {
+      "filename": "25-Permasalahan-Seputar-Pernikahan 2_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\25-Permasalahan-Seputar-Pernikahan 2_essential_info.wav",
+      "cosKey": "audio/25-Permasalahan-Seputar-Pernikahan 2_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/25-Permasalahan-Seputar-Pernikahan 2_essential_info.wav",
+      "fileSize": 11857068,
+      "status": "success"
+    },
+    {
+      "filename": "25-Permasalahan-Seputar-Pernikahan_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\25-Permasalahan-Seputar-Pernikahan_essential_info.wav",
+      "cosKey": "audio/25-Permasalahan-Seputar-Pernikahan_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/25-Permasalahan-Seputar-Pernikahan_essential_info.wav",
+      "fileSize": 16752812,
+      "status": "success"
+    },
+    {
+      "filename": "328_ Ibadah-Ibadah Saat Haid_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\328_ Ibadah-Ibadah Saat Haid_essential_info.wav",
+      "cosKey": "audio/328_ Ibadah-Ibadah Saat Haid_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/328_ Ibadah-Ibadah Saat Haid_essential_info.wav",
+      "fileSize": 613996,
+      "status": "success"
+    },
+    {
+      "filename": "8e5dd-aproval-parenting-anak-usia-dini_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\8e5dd-aproval-parenting-anak-usia-dini_essential_info.wav",
+      "cosKey": "audio/8e5dd-aproval-parenting-anak-usia-dini_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/8e5dd-aproval-parenting-anak-usia-dini_essential_info.wav",
+      "fileSize": 8386732,
+      "status": "success"
+    },
+    {
+      "filename": "99 Untuk Tuhanku - Emha Ainun Nadjib_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\99 Untuk Tuhanku - Emha Ainun Nadjib_essential_info.wav",
+      "cosKey": "audio/99 Untuk Tuhanku - Emha Ainun Nadjib_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/99 Untuk Tuhanku - Emha Ainun Nadjib_essential_info.wav",
+      "fileSize": 16563404,
+      "status": "success"
+    },
+    {
+      "filename": "A The Essence of Thick Face_ Black Heart _ PDFDriv_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\A The Essence of Thick Face_ Black Heart _ PDFDriv_essential_info.wav",
+      "cosKey": "audio/A The Essence of Thick Face_ Black Heart _ PDFDriv_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/A The Essence of Thick Face_ Black Heart _ PDFDriv_essential_info.wav",
+      "fileSize": 6137004,
+      "status": "success"
+    },
+    {
+      "filename": "Aboebakar Atjeh - Aliran Syi_ah di Nusantara_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\Aboebakar Atjeh - Aliran Syi_ah di Nusantara_essential_info.wav",
+      "cosKey": "audio/Aboebakar Atjeh - Aliran Syi_ah di Nusantara_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/Aboebakar Atjeh - Aliran Syi_ah di Nusantara_essential_info.wav",
+      "fileSize": 9653452,
+      "status": "success"
+    },
+    {
+      "filename": "Algoritma Pemrograman Pende_ _Z-Library__essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\Algoritma Pemrograman Pende_ _Z-Library__essential_info.wav",
+      "cosKey": "audio/Algoritma Pemrograman Pende_ _Z-Library__essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/Algoritma Pemrograman Pende_ _Z-Library__essential_info.wav",
+      "fileSize": 18685516,
+      "status": "success"
+    },
+    {
+      "filename": "Ambillah Aqidahmu - Syaikh Muhammad Jamil Zainu_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\Ambillah Aqidahmu - Syaikh Muhammad Jamil Zainu_essential_info.wav",
+      "cosKey": "audio/Ambillah Aqidahmu - Syaikh Muhammad Jamil Zainu_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/Ambillah Aqidahmu - Syaikh Muhammad Jamil Zainu_essential_info.wav",
+      "fileSize": 11570828,
+      "status": "success"
+    },
+    {
+      "filename": "An Honest Thief - Fyodor Dostoyevsky - PDF_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\An Honest Thief - Fyodor Dostoyevsky - PDF_essential_info.wav",
+      "cosKey": "audio/An Honest Thief - Fyodor Dostoyevsky - PDF_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/An Honest Thief - Fyodor Dostoyevsky - PDF_essential_info.wav",
+      "fileSize": 7732492,
+      "status": "success"
+    },
+    {
+      "filename": "Anak-Anak Revolusi-buku1_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\Anak-Anak Revolusi-buku1_essential_info.wav",
+      "cosKey": "audio/Anak-Anak Revolusi-buku1_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/Anak-Anak Revolusi-buku1_essential_info.wav",
+      "fileSize": 9494668,
+      "status": "success"
+    },
+    {
+      "filename": "ANARKHISME DAN REVOLUSI SOSIAL - ALEXANDER BERKMAN_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\ANARKHISME DAN REVOLUSI SOSIAL - ALEXANDER BERKMAN_essential_info.wav",
+      "cosKey": "audio/ANARKHISME DAN REVOLUSI SOSIAL - ALEXANDER BERKMAN_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/ANARKHISME DAN REVOLUSI SOSIAL - ALEXANDER BERKMAN_essential_info.wav",
+      "fileSize": 7492812,
+      "status": "success"
+    },
+    {
+      "filename": "Andrea Hirata - Sang Pemimpi _ PDFDrive __essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\Andrea Hirata - Sang Pemimpi _ PDFDrive __essential_info.wav",
+      "cosKey": "audio/Andrea Hirata - Sang Pemimpi _ PDFDrive __essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/Andrea Hirata - Sang Pemimpi _ PDFDrive __essential_info.wav",
+      "fileSize": 16594124,
+      "status": "success"
+    },
+    {
+      "filename": "AVERE PROJECT _Naskah Fiks__essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\AVERE PROJECT _Naskah Fiks__essential_info.wav",
+      "cosKey": "audio/AVERE PROJECT _Naskah Fiks__essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/AVERE PROJECT _Naskah Fiks__essential_info.wav",
+      "fileSize": 12147916,
+      "status": "success"
+    },
+    {
+      "filename": "Awalil_Rizky__Nasyith_Majidi_Utang_Pemerintah_Menc_essential_info.wav",
+      "localPath": "D:\\b_outside\\a_intesa_global_technology\\Storify\\audio_output\\Awalil_Rizky__Nasyith_Majidi_Utang_Pemerintah_Menc_essential_info.wav",
+      "cosKey": "audio/Awalil_Rizky__Nasyith_Majidi_Utang_Pemerintah_Menc_essential_info.wav",
+      "cosUrl": "https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/audio/Awalil_Rizky__Nasyith_Majidi_Utang_Pemerintah_Menc_essential_info.wav",
+      "fileSize": 26868684,
+      "status": "success"
+    }
+  ]
+}
