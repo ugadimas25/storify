@@ -287,12 +287,23 @@ export async function registerRoutes(
     const userId = (req.isAuthenticated && req.isAuthenticated() && req.user) ? req.user.claims.sub : undefined;
     const { bookId, visitorId } = req.body;
     
+    // Debug log
+    console.log('[LISTENING] Record request:', {
+      userId,
+      bookId,
+      visitorId,
+      hasUser: !!req.user,
+      isAuth: req.isAuthenticated ? req.isAuthenticated() : false,
+    });
+    
     if (!bookId) {
       return res.status(400).json({ message: "Book ID is required" });
     }
 
     // Check if user can listen
     const status = await storage.checkListeningStatus(userId, visitorId);
+    console.log('[LISTENING] Status check:', status);
+    
     if (!status.canListen) {
       return res.status(403).json({ 
         message: "Listening limit reached",
