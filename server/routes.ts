@@ -208,7 +208,7 @@ export async function registerRoutes(
   });
 
   app.get(api.favorites.check.path, async (req: any, res) => {
-     if (!req.isAuthenticated()) {
+     if (!req.isAuthenticated || !req.isAuthenticated()) {
          return res.json({ isFavorite: false });
      }
      const userId = req.user.claims.sub;
@@ -231,7 +231,7 @@ export async function registerRoutes(
   });
 
   app.get(api.playback.getProgress.path, async (req: any, res) => {
-    if (!req.isAuthenticated()) {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
       return res.json({ progress: 0, currentTime: 0 });
     }
     const userId = req.user.claims.sub;
@@ -275,7 +275,7 @@ export async function registerRoutes(
 
   // Check listening status (limits)
   app.get('/api/listening/status', async (req: any, res) => {
-    const userId = req.isAuthenticated() ? req.user.claims.sub : undefined;
+    const userId = (req.isAuthenticated && req.isAuthenticated() && req.user) ? req.user.claims.sub : undefined;
     const visitorId = req.query.visitorId as string;
     
     const status = await storage.checkListeningStatus(userId, visitorId);
@@ -284,7 +284,7 @@ export async function registerRoutes(
 
   // Record listening (when user plays a book)
   app.post('/api/listening/record', async (req: any, res) => {
-    const userId = req.isAuthenticated() ? req.user.claims.sub : undefined;
+    const userId = (req.isAuthenticated && req.isAuthenticated() && req.user) ? req.user.claims.sub : undefined;
     const { bookId, visitorId } = req.body;
     
     if (!bookId) {
