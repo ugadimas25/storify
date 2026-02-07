@@ -5,7 +5,7 @@ import {
   type Book, type InsertBook, type Favorite, type PlaybackProgress,
   type SubscriptionPlan, type Subscription, type ListeningHistory, type PaymentTransaction
 } from "@shared/schema";
-import { eq, and, desc, like, sql, gte, or, isNull } from "drizzle-orm";
+import { eq, and, desc, like, notLike, sql, gte, or, isNull } from "drizzle-orm";
 
 // Listening limits
 const GUEST_LISTEN_LIMIT = 1;
@@ -70,6 +70,9 @@ export class DatabaseStorage implements IStorage {
     let query = db.select().from(books);
     const conditions = [];
 
+    // Filter out books with dummy audio URLs (only show real COS audio)
+    conditions.push(notLike(books.audioUrl, '%soundhelix%'));
+
     if (params?.search) {
       conditions.push(like(books.title, `%${params.search}%`));
     }
@@ -80,12 +83,8 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(books.isFeatured, params.featured));
     }
 
-    if (conditions.length > 0) {
-      // @ts-ignore - AND logic handling
-      return await query.where(and(...conditions)).orderBy(desc(books.id));
-    }
-
-    return await query.orderBy(desc(books.id));
+    // @ts-ignore - AND logic handling
+    return await query.where(and(...conditions)).orderBy(desc(books.id));
   }
 
   async getBook(id: number): Promise<Book | undefined> {
@@ -107,7 +106,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFavorites(userId: string): Promise<Book[]> {
-    // Join favorites with books
+    // Join favorites with books (exclude dummy audio)
     const result = await db
       .select({
         id: books.id,
@@ -122,7 +121,10 @@ export class DatabaseStorage implements IStorage {
       })
       .from(favorites)
       .innerJoin(books, eq(favorites.bookId, books.id))
-      .where(eq(favorites.userId, userId));
+      .where(and(
+        eq(favorites.userId, userId),
+        notLike(books.audioUrl, '%soundhelix%')
+      ));
     
     return result;
   }
@@ -189,7 +191,10 @@ export class DatabaseStorage implements IStorage {
       })
       .from(playbackProgress)
       .innerJoin(books, eq(playbackProgress.bookId, books.id))
-      .where(eq(playbackProgress.userId, userId))
+      .where(and(
+        eq(playbackProgress.userId, userId),
+        notLike(books.audioUrl, '%soundhelix%')
+      ))
       .orderBy(desc(playbackProgress.updatedAt))
       .limit(limit);
     
