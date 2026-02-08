@@ -1,28 +1,31 @@
 import { createRoot } from "react-dom/client";
-import { StatusBar, Style } from '@capacitor/status-bar';
-import { SplashScreen } from '@capacitor/splash-screen';
 import { Capacitor } from '@capacitor/core';
-import { App as CapApp } from '@capacitor/app';
 import App from "./App";
 import "./index.css";
 
-// Initialize Capacitor native features
+// Initialize Capacitor native features (dynamic imports to avoid web build issues)
 if (Capacitor.isNativePlatform()) {
-  // Style the status bar
-  StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
-  StatusBar.setBackgroundColor({ color: '#1a1a2e' }).catch(() => {});
+  Promise.all([
+    import('@capacitor/status-bar'),
+    import('@capacitor/splash-screen'),
+    import('@capacitor/app'),
+  ]).then(([{ StatusBar, Style }, { SplashScreen }, { App: CapApp }]) => {
+    // Style the status bar
+    StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    StatusBar.setBackgroundColor({ color: '#1a1a2e' }).catch(() => {});
 
-  // Handle Android back button
-  CapApp.addListener('backButton', ({ canGoBack }) => {
-    if (canGoBack) {
-      window.history.back();
-    } else {
-      CapApp.exitApp();
-    }
-  });
+    // Handle Android back button
+    CapApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+      } else {
+        CapApp.exitApp();
+      }
+    });
 
-  // Hide splash screen after app loads
-  SplashScreen.hide().catch(() => {});
+    // Hide splash screen after app loads
+    SplashScreen.hide().catch(() => {});
+  }).catch(() => {});
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
