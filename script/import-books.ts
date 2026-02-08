@@ -223,26 +223,36 @@ function normalizeForMatching(filename: string): string {
 
 /**
  * Find matching audio URL for a PDF filename
+ * Uses STRICT matching - only assigns COS audio when titles clearly match.
  * Returns { audioUrl, cosFilename } for database storage
  */
 function findAudioUrl(pdfFilename: string): { audioUrl: string; cosFilename: string | null } {
   const normalized = normalizeForMatching(pdfFilename);
   
-  // Direct match
+  // Direct match (exact normalized form)
   if (audioMapping[normalized]) {
     const url = audioMapping[normalized];
     const filename = extractFilenameFromUrl(url);
     return { audioUrl: url, cosFilename: filename };
   }
   
-  // Fuzzy match - find best match by string similarity
+  // Strict containment match: book title must be a substring of audio key OR vice versa
+  // AND the shorter string must be at least 60% of the longer string's length
   let bestMatch = '';
   let bestScore = 0;
   
   for (const [audioKey, audioUrl] of Object.entries(audioMapping)) {
-    const score = stringSimilarity(normalized, audioKey);
-    if (score > bestScore && score > 0.6) { // 60% similarity threshold
-      bestScore = score;
+    // Check substring containment (one must contain the other)
+    const isContained = normalized.includes(audioKey) || audioKey.includes(normalized);
+    if (!isContained) continue;
+    
+    // Ensure the match is significant (not just a few common chars)
+    const shorter = normalized.length < audioKey.length ? normalized : audioKey;
+    const longer = normalized.length < audioKey.length ? audioKey : normalized;
+    const lengthRatio = shorter.length / longer.length;
+    
+    if (lengthRatio > bestScore && lengthRatio > 0.4) {
+      bestScore = lengthRatio;
       bestMatch = audioUrl;
     }
   }
