@@ -25,6 +25,7 @@ export const books = pgTable("books", {
   description: text("description").notNull(),
   coverUrl: text("cover_url").notNull(),
   audioUrl: text("audio_url").notNull(),
+  cosFilename: text("cos_filename"), // COS filename for matching validation
   duration: integer("duration").notNull(), // in seconds
   category: text("category").notNull(),
   isFeatured: boolean("is_featured").default(false).notNull(),

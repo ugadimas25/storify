@@ -223,13 +223,16 @@ function normalizeForMatching(filename: string): string {
 
 /**
  * Find matching audio URL for a PDF filename
+ * Returns { audioUrl, cosFilename } for database storage
  */
-function findAudioUrl(pdfFilename: string): string {
+function findAudioUrl(pdfFilename: string): { audioUrl: string; cosFilename: string | null } {
   const normalized = normalizeForMatching(pdfFilename);
   
   // Direct match
   if (audioMapping[normalized]) {
-    return audioMapping[normalized];
+    const url = audioMapping[normalized];
+    const filename = extractFilenameFromUrl(url);
+    return { audioUrl: url, cosFilename: filename };
   }
   
   // Fuzzy match - find best match by string similarity
@@ -245,12 +248,30 @@ function findAudioUrl(pdfFilename: string): string {
   }
   
   if (bestMatch) {
-    return bestMatch;
+    const filename = extractFilenameFromUrl(bestMatch);
+    return { audioUrl: bestMatch, cosFilename: filename };
   }
   
   // Fallback to dummy URL
   const randomIndex = Math.floor(Math.random() * 16) + 1;
-  return `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${randomIndex}.mp3`;
+  return { 
+    audioUrl: `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${randomIndex}.mp3`,
+    cosFilename: null // null indicates dummy audio
+  };
+}
+
+/**
+ * Extract filename from COS URL
+ */
+function extractFilenameFromUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    // Remove leading /audio/ or just /
+    return pathname.replace(/^\/audio\//, '').replace(/^\//, '');
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -335,12 +356,16 @@ async function importFromFile(filepath: string) {
     const isFeatured = Math.random() < 0.15;
     if (isFeatured) featured++;
     
+    // Get audio URL and COS filename
+    const audioData = findAudioUrl(filename);
+    
     const book = {
       title,
       author,
       description: `Buku "${title}" karya ${author}. Kategori: ${category}.`,
       coverUrl: getCoverUrl(category),
-      audioUrl: findAudioUrl(filename), // Match with COS audio files
+      audioUrl: audioData.audioUrl,
+      cosFilename: audioData.cosFilename,
       duration: getRandomDuration(),
       category,
       isFeatured,
@@ -349,7 +374,7 @@ async function importFromFile(filepath: string) {
     try {
       await db.insert(books).values(book);
       imported++;
-      console.log(`✓ [${category}] ${title}`);
+      console.log(`✓ [${category}] ${title}${audioData.cosFilename ? ` → ${audioData.cosFilename}` : ' (dummy)'}`);
     } catch (error: any) {
       if (error.message?.includes('duplicate')) {
         skipped++;
