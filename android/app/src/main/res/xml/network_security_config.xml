@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">storify.asia</domain>
+        <domain includeSubdomains="true">pewacaold-1379748683.cos.ap-jakarta.myqcloud.com</domain>
+    </domain-config>
+</network-security-config>

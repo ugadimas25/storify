@@ -23,3 +23,12 @@ npm-debug.log*
 
 # OS
 Thumbs.db
+
+# Android build artifacts (keep android/ project structure in git)
+android/app/build/
+android/.gradle/
+android/build/
+*.apk
+*.aab
+*.keystore
+release/

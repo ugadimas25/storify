@@ -1,6 +1,7 @@
 import { useBooks } from "@/hooks/use-books";
 import { useAuth } from "@/hooks/use-auth";
 import { useAudio } from "@/context/AudioContext";
+import { apiUrl } from "@/lib/api-config";
 import { BookCard } from "@/components/BookCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ export default function Home() {
   const { data: recentlyPlayed, isLoading: loadingRecent } = useQuery<RecentlyPlayedBook[]>({
     queryKey: ['recently-played'],
     queryFn: async () => {
-      const res = await fetch('/api/playback/recently-played', { credentials: 'include' });
+      const res = await fetch(apiUrl('/api/playback/recently-played'), { credentials: 'include' });
       if (!res.ok) return [];
       return res.json();
     },

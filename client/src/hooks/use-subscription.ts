@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./use-auth";
+import { apiUrl } from "@/lib/api-config";
 import type { SubscriptionPlan, Subscription, PaymentTransaction } from "@shared/schema";
 
 // Get or create visitor ID for guest users
@@ -33,7 +34,7 @@ export function useListeningStatus() {
       if (!user) {
         params.append("visitorId", visitorId);
       }
-      const res = await fetch(`/api/listening/status?${params.toString()}`, {
+      const res = await fetch(apiUrl(`/api/listening/status?${params.toString()}`), {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch listening status");
@@ -51,7 +52,7 @@ export function useRecordListening() {
 
   return useMutation({
     mutationFn: async (bookId: number) => {
-      const res = await fetch("/api/listening/record", {
+      const res = await fetch(apiUrl("/api/listening/record"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -77,7 +78,7 @@ export function useSubscriptionPlans() {
   return useQuery<SubscriptionPlan[]>({
     queryKey: ["subscription-plans"],
     queryFn: async () => {
-      const res = await fetch("/api/subscription/plans");
+      const res = await fetch(apiUrl("/api/subscription/plans"));
       if (!res.ok) throw new Error("Failed to fetch plans");
       return res.json();
     },
@@ -91,7 +92,7 @@ export function useActiveSubscription() {
   return useQuery<Subscription | null>({
     queryKey: ["active-subscription", user?.id],
     queryFn: async () => {
-      const res = await fetch("/api/subscription/active", {
+      const res = await fetch(apiUrl("/api/subscription/active"), {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch subscription");
@@ -105,7 +106,7 @@ export function useActiveSubscription() {
 export function useCreatePayment() {
   return useMutation({
     mutationFn: async (planId: number) => {
-      const res = await fetch("/api/payment/create", {
+      const res = await fetch(apiUrl("/api/payment/create"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -125,7 +126,7 @@ export function usePaymentStatus(transactionId: number | null, enabled: boolean 
   return useQuery<PaymentTransaction>({
     queryKey: ["payment-status", transactionId],
     queryFn: async () => {
-      const res = await fetch(`/api/payment/${transactionId}`);
+      const res = await fetch(apiUrl(`/api/payment/${transactionId}`));
       if (!res.ok) throw new Error("Failed to fetch payment status");
       return res.json();
     },
@@ -146,7 +147,7 @@ export function useUpdatePayment() {
       dokuPaymentMethod?: string;
       dokuPaymentChannel?: string;
     }) => {
-      const res = await fetch(`/api/payment/${transactionId}/update`, {
+      const res = await fetch(apiUrl(`/api/payment/${transactionId}/update`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

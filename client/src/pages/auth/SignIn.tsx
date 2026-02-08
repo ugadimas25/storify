@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { apiUrl } from "@/lib/api-config";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ export default function SignIn() {
     setRequiresVerification(false);
 
     try {
-      const response = await fetch("/api/auth/signin", {
+      const response = await fetch(apiUrl("/api/auth/signin"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -65,7 +66,7 @@ export default function SignIn() {
   const handleResend = async () => {
     setResending(true);
     try {
-      const response = await fetch("/api/auth/resend-verification", {
+      const response = await fetch(apiUrl("/api/auth/resend-verification"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBooks } from "@/hooks/use-books";
+import { apiUrl } from "@/lib/api-config";
 import { BookCard } from "@/components/BookCard";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +17,7 @@ export default function Explore() {
   const { data: categories = [], isLoading: loadingCategories } = useQuery<string[]>({
     queryKey: ['categories'],
     queryFn: async () => {
-      const res = await fetch('/api/categories');
+      const res = await fetch(apiUrl('/api/categories'));
       if (!res.ok) return [];
       return res.json();
     },

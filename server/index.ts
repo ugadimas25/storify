@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -11,6 +12,21 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+// CORS for Capacitor native app (capacitor:// and https://localhost origins)
+app.use(cors({
+  origin: [
+    'https://storify.asia',
+    'http://localhost:5000',
+    'http://localhost:5173',
+    'capacitor://localhost',
+    'https://localhost',
+    'http://localhost',
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 app.use(
   express.json({

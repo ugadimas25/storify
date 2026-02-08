@@ -1,10 +1,11 @@
 import { useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "./use-auth";
+import { apiUrl } from "@/lib/api-config";
 
 // Fire-and-forget activity logger
 function sendActivity(action: string, resourceType?: string, resourceId?: string, metadata?: Record<string, any>) {
-  fetch("/api/activity/log", {
+  fetch(apiUrl("/api/activity/log"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

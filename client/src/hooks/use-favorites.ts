@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
+import { apiUrl } from "@/lib/api-config";
 import { useToast } from "@/hooks/use-toast";
 
 export function useFavorites() {
   return useQuery({
     queryKey: [api.favorites.list.path],
     queryFn: async () => {
-      const res = await fetch(api.favorites.list.path, { credentials: "include" });
+      const res = await fetch(apiUrl(api.favorites.list.path), { credentials: "include" });
       if (res.status === 401) return null; // Handle unauth gracefully
       if (!res.ok) throw new Error("Failed to fetch favorites");
       return api.favorites.list.responses[200].parse(await res.json());
@@ -18,7 +19,7 @@ export function useIsFavorite(bookId: number) {
   return useQuery({
     queryKey: [api.favorites.check.path, bookId],
     queryFn: async () => {
-      const url = buildUrl(api.favorites.check.path, { bookId });
+      const url = apiUrl(buildUrl(api.favorites.check.path, { bookId }));
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) return { isFavorite: false };
       return api.favorites.check.responses[200].parse(await res.json());
@@ -33,7 +34,7 @@ export function useToggleFavorite() {
 
   return useMutation({
     mutationFn: async (bookId: number) => {
-      const url = buildUrl(api.favorites.toggle.path, { bookId });
+      const url = apiUrl(buildUrl(api.favorites.toggle.path, { bookId }));
       const res = await fetch(url, { 
         method: api.favorites.toggle.method,
         credentials: "include" 

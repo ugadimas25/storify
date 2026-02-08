@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, useEffect, useCallb
 import { Book } from '@shared/schema';
 import { useAuth } from '../hooks/use-auth';
 import { getVisitorId } from '../hooks/use-subscription';
+import { apiUrl } from '../lib/api-config';
 
 interface AudioContextType {
   currentBook: Book | null;
@@ -50,7 +51,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     debounce(async (bookId: number, prog: number, time: number) => {
       if (!user) return;
       try {
-        await fetch(`/api/playback/${bookId}`, {
+        await fetch(apiUrl(`/api/playback/${bookId}`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -115,7 +116,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (currentBook && user && progress > 0) {
         // Save immediately on unmount
-        fetch(`/api/playback/${currentBook.id}`, {
+        fetch(apiUrl(`/api/playback/${currentBook.id}`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -135,7 +136,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     // Check listening limits before playing
     try {
       const visitorId = getVisitorId();
-      const res = await fetch('/api/listening/record', {
+      const res = await fetch(apiUrl('/api/listening/record'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -174,7 +175,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
             audioRef.current.currentTime = startTime;
           } else if (user) {
             try {
-              const res = await fetch(`/api/playback/${book.id}`, { credentials: 'include' });
+              const res = await fetch(apiUrl(`/api/playback/${book.id}`), { credentials: 'include' });
               const data = await res.json();
               if (data.currentTime > 0 && audioRef.current) {
                 audioRef.current.currentTime = data.currentTime;
@@ -237,7 +238,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const closePlayer = () => {
     // Save progress before closing
     if (currentBook && user && progress > 0) {
-      fetch(`/api/playback/${currentBook.id}`, {
+      fetch(apiUrl(`/api/playback/${currentBook.id}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

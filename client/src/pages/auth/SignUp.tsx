@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
+import { apiUrl } from "@/lib/api-config";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ export default function SignUp() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch(apiUrl("/api/auth/signup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
@@ -71,7 +72,7 @@ export default function SignUp() {
   const handleResend = async () => {
     setResending(true);
     try {
-      const response = await fetch("/api/auth/resend-verification", {
+      const response = await fetch(apiUrl("/api/auth/resend-verification"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
