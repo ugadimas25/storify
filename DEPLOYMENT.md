@@ -101,6 +101,10 @@ DOKU_CLIENT_ID=MCH-xxxx-xxxx-xxxx
 DOKU_SECRET_KEY=SK-xxxx-xxxx-xxxx
 XENDIT_PUBLIC_KEY=xnd_public_production_your_key_here
 
+# Pewaca QRIS Payment Gateway
+PEWACA_EMAIL=your_pewaca_email@example.com
+PEWACA_PASSWORD=your_pewaca_password
+
 # Webhook (generate dengan: openssl rand -hex 32)
 WEBHOOK_TOKEN=your_webhook_token_here
 
