@@ -163,3 +163,110 @@ export function useUpdatePayment() {
     },
   });
 }
+
+// ============= QRIS PAYMENT (Django Storify-Subscription API) =============
+
+// QRIS transaction type (from Django API via proxy)
+export interface QrisTransaction {
+  id: string; // UUID
+  plan: {
+    id: number;
+    name: string;
+    price: number;
+    durationDays: number;
+    description: string;
+    isActive: boolean;
+  };
+  amount: number;
+  status: "pending" | "paid" | "expired" | "failed";
+  qrisContent: string;
+  qrisInvoiceId: string;
+  transactionNumber: string;
+  expiredAt: string;
+  paidAt: string | null;
+  paymentCustomerName: string;
+  paymentMethodBy: string;
+  createdAt: string;
+}
+
+export interface QrisPlan {
+  id: number;
+  name: string;
+  price: number;
+  durationDays: number;
+  description: string;
+  isActive: boolean;
+}
+
+export interface QrisSubscription {
+  id: number;
+  plan: QrisPlan;
+  startDate: string;
+  endDate: string;
+  status: string;
+  createdAt: string;
+}
+
+// Fetch QRIS subscription plans (from Django API)
+export function useQrisPlans() {
+  return useQuery<QrisPlan[]>({
+    queryKey: ["qris-plans"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/api/qris/plans"));
+      if (!res.ok) throw new Error("Failed to fetch QRIS plans");
+      return res.json();
+    },
+  });
+}
+
+// Fetch QRIS active subscription (from Django API)
+export function useQrisActiveSubscription() {
+  const { user } = useAuth();
+
+  return useQuery<QrisSubscription | null>({
+    queryKey: ["qris-active-subscription", user?.id],
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/api/qris/subscription/active"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch QRIS subscription");
+      return res.json();
+    },
+    enabled: !!user,
+  });
+}
+
+// Create QRIS payment transaction (via Django API)
+export function useCreateQrisPayment() {
+  return useMutation({
+    mutationFn: async (planId: number) => {
+      const res = await fetch(apiUrl("/api/qris/payment/create"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to create QRIS payment");
+      }
+      return data as QrisTransaction;
+    },
+  });
+}
+
+// Get QRIS payment status (polling every 3 seconds per guide spec)
+export function useQrisPaymentStatus(transactionId: string | null, enabled: boolean = true) {
+  return useQuery<QrisTransaction>({
+    queryKey: ["qris-payment-status", transactionId],
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/qris/payment/${transactionId}`), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch QRIS payment status");
+      return res.json();
+    },
+    enabled: !!transactionId && enabled,
+    refetchInterval: enabled ? 3000 : false, // Poll every 3 seconds (per QRIS guide)
+  });
+}

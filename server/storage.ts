@@ -52,17 +52,24 @@ export interface IStorage {
   getListeningCount(userId?: string, visitorId?: string): Promise<number>;
 
   // Payment Transactions
-  createPaymentTransaction(userId: string, planId: number, amount: number, dokuData?: {
+  createPaymentTransaction(userId: string, planId: number, amount: number, gatewayData?: {
+    paymentGateway?: string;
+    // DOKU fields
     dokuInvoiceNumber?: string;
     dokuPaymentUrl?: string;
     dokuSessionId?: string;
     dokuTokenId?: string;
     dokuRequestId?: string;
+    // QRIS Pewaca fields
+    qrisContent?: string;
+    qrisInvoiceId?: string;
+    qrisTransactionNumber?: string;
     expiredAt?: Date;
   }): Promise<PaymentTransaction>;
   updatePaymentTransaction(id: number, data: Partial<PaymentTransaction>): Promise<PaymentTransaction | undefined>;
   getPaymentTransaction(id: number): Promise<PaymentTransaction | undefined>;
   getPaymentTransactionByInvoiceNumber(invoiceNumber: string): Promise<PaymentTransaction | undefined>;
+  getPaymentTransactionByQrisInvoiceId(qrisInvoiceId: string): Promise<PaymentTransaction | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -345,16 +352,22 @@ export class DatabaseStorage implements IStorage {
     userId: string, 
     planId: number, 
     amount: number, 
-    dokuData?: {
+    gatewayData?: {
+      paymentGateway?: string;
+      // DOKU fields
       dokuInvoiceNumber?: string;
       dokuPaymentUrl?: string;
       dokuSessionId?: string;
       dokuTokenId?: string;
       dokuRequestId?: string;
+      // QRIS Pewaca fields
+      qrisContent?: string;
+      qrisInvoiceId?: string;
+      qrisTransactionNumber?: string;
       expiredAt?: Date;
     }
   ): Promise<PaymentTransaction> {
-    const expiredAt = dokuData?.expiredAt || (() => {
+    const expiredAt = gatewayData?.expiredAt || (() => {
       const date = new Date();
       date.setMinutes(date.getMinutes() + 60); // 60 minutes expiry
       return date;
@@ -365,11 +378,15 @@ export class DatabaseStorage implements IStorage {
       planId,
       amount,
       status: 'pending',
-      dokuInvoiceNumber: dokuData?.dokuInvoiceNumber || null,
-      dokuPaymentUrl: dokuData?.dokuPaymentUrl || null,
-      dokuSessionId: dokuData?.dokuSessionId || null,
-      dokuTokenId: dokuData?.dokuTokenId || null,
-      dokuRequestId: dokuData?.dokuRequestId || null,
+      paymentGateway: gatewayData?.paymentGateway || 'doku',
+      dokuInvoiceNumber: gatewayData?.dokuInvoiceNumber || null,
+      dokuPaymentUrl: gatewayData?.dokuPaymentUrl || null,
+      dokuSessionId: gatewayData?.dokuSessionId || null,
+      dokuTokenId: gatewayData?.dokuTokenId || null,
+      dokuRequestId: gatewayData?.dokuRequestId || null,
+      qrisContent: gatewayData?.qrisContent || null,
+      qrisInvoiceId: gatewayData?.qrisInvoiceId || null,
+      qrisTransactionNumber: gatewayData?.qrisTransactionNumber || null,
       expiredAt,
     }).returning();
 
@@ -395,6 +412,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(paymentTransactions)
       .where(eq(paymentTransactions.dokuInvoiceNumber, invoiceNumber));
+    return transaction;
+  }
+
+  async getPaymentTransactionByQrisInvoiceId(qrisInvoiceId: string): Promise<PaymentTransaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(paymentTransactions)
+      .where(eq(paymentTransactions.qrisInvoiceId, qrisInvoiceId));
     return transaction;
   }
 }

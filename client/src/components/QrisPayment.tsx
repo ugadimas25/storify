@@ -1,52 +1,41 @@
 import { useState, useEffect } from "react";
-import { 
-  useSubscriptionPlans, 
-  useCreatePayment, 
-  usePaymentStatus,
-  useActiveSubscription,
-  useListeningStatus
+import {
+  useQrisPlans,
+  useCreateQrisPayment,
+  useQrisPaymentStatus,
+  useQrisActiveSubscription,
+  useListeningStatus,
 } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, XCircle, Crown, Music, Clock, RefreshCw, ExternalLink, AlertTriangle, Wrench } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Crown, Music, Clock, RefreshCw, QrCode } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Payment methods available through DOKU Checkout
-const PAYMENT_METHODS = [
-  { name: "QRIS", logo: "📱" },
-  { name: "BCA VA", logo: "🏦" },
-  { name: "Mandiri VA", logo: "🏦" },
-  { name: "BRI VA", logo: "🏦" },
-  { name: "BNI VA", logo: "🏦" },
-  { name: "ShopeePay", logo: "🧡" },
-  { name: "OVO", logo: "💜" },
-];
 
 type PaymentState = "idle" | "pending" | "paid" | "expired" | "failed";
 
-interface DokuPaymentProps {
+interface QrisPaymentProps {
   onSuccess?: () => void;
   onClose?: () => void;
 }
 
-export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
+export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
   const { user } = useAuth();
-  const { data: plans, isLoading: plansLoading } = useSubscriptionPlans();
-  const { data: activeSubscription } = useActiveSubscription();
+  const { data: plans, isLoading: plansLoading } = useQrisPlans();
+  const { data: activeSubscription } = useQrisActiveSubscription();
   const { data: listeningStatus } = useListeningStatus();
-  const createPayment = useCreatePayment();
-  
+  const createPayment = useCreateQrisPayment();
+
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
-  const [currentTransaction, setCurrentTransaction] = useState<number | null>(null);
+  const [currentTransaction, setCurrentTransaction] = useState<string | null>(null);
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [paymentUrl, setPaymentUrl] = useState<string>("");
+  const [qrisContent, setQrisContent] = useState<string>("");
 
-  // Poll payment status
-  const { data: paymentStatus } = usePaymentStatus(
-    currentTransaction, 
+  // Poll QRIS payment status
+  const { data: paymentStatus } = useQrisPaymentStatus(
+    currentTransaction,
     paymentState === "pending"
   );
 
@@ -63,7 +52,6 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
       setPaymentState("failed");
     }
 
-    // Update time left
     if (paymentStatus.expiredAt && paymentStatus.status === "pending") {
       const expiry = new Date(paymentStatus.expiredAt).getTime();
       const now = Date.now();
@@ -89,19 +77,12 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
     return () => clearInterval(timer);
   }, [paymentState, timeLeft]);
 
-  // Format time as HH:MM:SS or MM:SS
   const formatTime = (seconds: number): string => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
+    const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    
-    if (hrs > 0) {
-      return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-    }
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Format price to Indonesian Rupiah
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -110,7 +91,7 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
     }).format(price);
   };
 
-  // Handle plan selection and payment creation
+  // Handle plan selection and QRIS payment creation
   const handleSelectPlan = async (planId: number) => {
     if (!user) {
       alert("Silakan login terlebih dahulu untuk berlangganan");
@@ -118,29 +99,23 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
     }
 
     setSelectedPlanId(planId);
-    
+
     try {
       const transaction = await createPayment.mutateAsync(planId);
       setCurrentTransaction(transaction.id);
-      setPaymentUrl(transaction.dokuPaymentUrl || "");
+      setQrisContent(transaction.qrisContent || "");
       setPaymentState("pending");
-      
-      // Set initial countdown
+
       if (transaction.expiredAt) {
         const expiry = new Date(transaction.expiredAt).getTime();
         const now = Date.now();
         setTimeLeft(Math.max(0, Math.floor((expiry - now) / 1000)));
       } else {
-        setTimeLeft(60 * 60); // Default 1 hour
-      }
-      
-      // Open DOKU payment page in new tab
-      if (transaction.dokuPaymentUrl) {
-        window.open(transaction.dokuPaymentUrl, '_blank');
+        setTimeLeft(30 * 60); // Default 30 minutes
       }
     } catch (error: any) {
-      console.error("Payment creation failed:", error);
-      alert(error.message || "Gagal membuat pembayaran");
+      console.error("QRIS payment creation failed:", error);
+      alert(error.message || "Gagal membuat pembayaran QRIS");
     }
   };
 
@@ -149,7 +124,7 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
     setPaymentState("idle");
     setSelectedPlanId(null);
     setCurrentTransaction(null);
-    setPaymentUrl("");
+    setQrisContent("");
     setTimeLeft(0);
   };
 
@@ -163,7 +138,8 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
           </div>
           <CardTitle className="text-yellow-700 dark:text-yellow-400">Anda Sudah Berlangganan!</CardTitle>
           <CardDescription>
-            Langganan aktif sampai: {new Date(activeSubscription.endDate).toLocaleDateString("id-ID", {
+            Langganan aktif sampai:{" "}
+            {new Date(activeSubscription.endDate).toLocaleDateString("id-ID", {
               weekday: "long",
               year: "numeric",
               month: "long",
@@ -198,7 +174,9 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
           <div className="mx-auto w-20 h-20 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mb-4 animate-bounce">
             <CheckCircle className="w-12 h-12 text-green-600" />
           </div>
-          <CardTitle className="text-green-700 dark:text-green-400 text-2xl">Pembayaran Berhasil!</CardTitle>
+          <CardTitle className="text-green-700 dark:text-green-400 text-2xl">
+            Pembayaran Berhasil!
+          </CardTitle>
           <CardDescription className="text-green-600 dark:text-green-300">
             Terima kasih telah berlangganan Storify Premium
           </CardDescription>
@@ -227,8 +205,8 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
             {paymentState === "expired" ? "Waktu Habis" : "Pembayaran Gagal"}
           </CardTitle>
           <CardDescription className="text-red-600 dark:text-red-300">
-            {paymentState === "expired" 
-              ? "Halaman pembayaran sudah kedaluwarsa. Silakan coba lagi."
+            {paymentState === "expired"
+              ? "QR Code QRIS sudah kedaluwarsa. Silakan coba lagi."
               : "Terjadi kesalahan dalam pembayaran. Silakan coba lagi."}
           </CardDescription>
         </CardHeader>
@@ -242,76 +220,72 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
     );
   }
 
-  // Payment page display (pending payment)
-  if (paymentState === "pending" && paymentUrl) {
-    const selectedPlan = plans?.find(p => p.id === selectedPlanId);
-    
+  // QR Code display (pending payment)
+  if (paymentState === "pending" && qrisContent) {
+    const selectedPlan = plans?.find((p) => p.id === selectedPlanId);
+
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
-          <CardTitle>Selesaikan Pembayaran</CardTitle>
+          <CardTitle className="flex items-center justify-center gap-2">
+            <QrCode className="w-5 h-5" />
+            Scan QR Code QRIS
+          </CardTitle>
           <CardDescription>
             {selectedPlan?.name} - {formatPrice(selectedPlan?.price || 0)}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Payment link */}
-          <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
-            <div className="flex items-center justify-center w-16 h-16 bg-white dark:bg-gray-800 rounded-xl shadow-md">
-              <img 
-                src="https://dashboard.doku.com/docs/img/doku-logo.svg" 
-                alt="DOKU" 
-                className="w-10 h-10"
+          {/* QR Code Display */}
+          <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-xl border-2 border-dashed border-primary/20">
+            <div className="bg-white p-4 rounded-lg shadow-inner">
+              {/* Using QR code image from API - renders qrisContent as QR */}
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrisContent)}`}
+                alt="QRIS QR Code"
+                className="w-[250px] h-[250px]"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
+                  // Fallback: show the qris content text
+                  (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
             </div>
-            <div className="text-center space-y-2">
-              <p className="font-medium">Halaman pembayaran DOKU telah dibuka</p>
-              <p className="text-sm text-muted-foreground">Pilih metode pembayaran dan selesaikan di tab baru</p>
+            <div className="text-center space-y-1">
+              <p className="text-sm font-medium text-primary">Scan dengan aplikasi e-wallet Anda</p>
+              <p className="text-xs text-muted-foreground">
+                GoPay, OVO, DANA, ShopeePay, LinkAja, atau mobile banking
+              </p>
             </div>
-            <Button 
-              onClick={() => window.open(paymentUrl, '_blank')}
-              className="w-full max-w-xs"
-            >
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Buka Halaman Pembayaran
-            </Button>
+          </div>
+
+          {/* Supported payment methods */}
+          <div className="flex justify-center gap-3 flex-wrap">
+            {["GoPay", "OVO", "DANA", "ShopeePay", "LinkAja"].map((method) => (
+              <div
+                key={method}
+                className="flex items-center gap-1 px-3 py-1.5 bg-muted rounded-full text-xs font-medium"
+              >
+                {method}
+              </div>
+            ))}
           </div>
 
           {/* Countdown */}
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 text-lg font-medium">
               <Clock className="w-5 h-5 text-orange-500" />
-              <span className={cn(
-                "font-mono text-xl",
-                timeLeft < 300 ? "text-red-500" : "text-orange-500"
-              )}>
+              <span
+                className={cn(
+                  "font-mono text-xl",
+                  timeLeft < 120 ? "text-red-500" : "text-orange-500"
+                )}
+              >
                 {formatTime(timeLeft)}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Selesaikan pembayaran sebelum waktu habis
             </p>
-          </div>
-
-          {/* Payment methods */}
-          <div className="space-y-2">
-            <p className="text-sm text-center text-muted-foreground">
-              Metode pembayaran yang tersedia:
-            </p>
-            <div className="flex justify-center gap-2 flex-wrap">
-              {PAYMENT_METHODS.map((method) => (
-                <div 
-                  key={method.name}
-                  className="flex items-center gap-1 px-2 py-1 bg-muted rounded-md text-xs"
-                >
-                  <span>{method.logo}</span>
-                  <span className="text-[10px]">{method.name}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Status indicator */}
@@ -321,12 +295,13 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
           </div>
 
           {/* Instructions */}
-          <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
+          <div className="bg-muted/50 p-4 rounded-lg text-sm space-y-2">
             <p className="font-medium">Cara Pembayaran:</p>
             <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-              <li>Pilih metode pembayaran di halaman DOKU</li>
-              <li>Selesaikan pembayaran sesuai instruksi</li>
-              <li>Subscription akan aktif otomatis setelah pembayaran berhasil</li>
+              <li>Buka aplikasi e-wallet atau mobile banking</li>
+              <li>Scan QR Code di atas</li>
+              <li>Konfirmasi pembayaran di aplikasi Anda</li>
+              <li>Subscription aktif otomatis setelah pembayaran berhasil</li>
             </ol>
           </div>
 
@@ -341,53 +316,34 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
 
   // Plan selection (idle state)
   return (
-    <div className="space-y-6 relative">
-      {/* Under Maintenance Notification - Modern Style */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-800 bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/40 p-6 shadow-lg">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/20 dark:bg-amber-700/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-200/20 dark:bg-orange-700/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-        <div className="relative flex items-start gap-4">
-          <div className="flex-shrink-0 w-14 h-14 bg-amber-100 dark:bg-amber-900/50 rounded-2xl flex items-center justify-center shadow-sm">
-            <Wrench className="w-7 h-7 text-amber-600 dark:text-amber-400 animate-pulse" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-bold text-amber-900 dark:text-amber-200 text-lg">Under Maintenance</h3>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-200/80 dark:bg-amber-800/60 text-amber-800 dark:text-amber-200">
-                <AlertTriangle className="w-3 h-3" />
-                Sementara
-              </span>
-            </div>
-            <p className="text-sm text-amber-700 dark:text-amber-300/80 leading-relaxed">
-              Pembayaran melalui DOKU sedang dalam perbaikan. Silakan gunakan metode pembayaran <strong>QRIS</strong> yang tersedia di tab sebelah.
-            </p>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* Header */}
-      <div className="text-center space-y-2 opacity-50 pointer-events-none">
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
+          <QrCode className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-primary">Pembayaran QRIS</span>
+        </div>
         <h2 className="text-2xl font-bold">Pilih Paket Langganan</h2>
         <p className="text-muted-foreground">
-          Nikmati unlimited audiobook dengan berlangganan Storify Premium
+          Bayar dengan scan QR menggunakan GoPay, OVO, DANA, dan lainnya
         </p>
         {listeningStatus && !listeningStatus.hasSubscription && (
           <Badge variant="outline" className="mt-2">
-            {user 
+            {user
               ? `Sisa ${listeningStatus.limit! - listeningStatus.listenCount} dari ${listeningStatus.limit} buku gratis`
               : `Guest: ${listeningStatus.listenCount}/${listeningStatus.limit} buku didengarkan`}
           </Badge>
         )}
       </div>
 
-      {/* Plans - Disabled during maintenance */}
-      <div className="grid gap-4 md:grid-cols-3 opacity-50 pointer-events-none select-none">
+      {/* Plans */}
+      <div className="grid gap-4 md:grid-cols-3">
         {plans?.map((plan) => {
           const isPopular = plan.name.toLowerCase().includes("bulanan");
           const pricePerDay = Math.round(plan.price / plan.durationDays);
-          
+
           return (
-            <Card 
+            <Card
               key={plan.id}
               className={cn(
                 "relative transition-all hover:shadow-lg cursor-pointer",
@@ -414,7 +370,7 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
                     {formatPrice(pricePerDay)}/hari
                   </p>
                 </div>
-                
+
                 <ul className="text-sm text-left space-y-2">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
@@ -430,7 +386,7 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
                   </li>
                 </ul>
 
-                <Button 
+                <Button
                   className="w-full"
                   variant={selectedPlanId === plan.id ? "default" : "outline"}
                   onClick={(e) => {
@@ -445,7 +401,10 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
                       Processing...
                     </>
                   ) : (
-                    "Pilih Paket"
+                    <>
+                      <QrCode className="w-4 h-4 mr-2" />
+                      Bayar dengan QRIS
+                    </>
                   )}
                 </Button>
               </CardContent>
@@ -454,10 +413,10 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
         })}
       </div>
 
-      {/* Powered by DOKU */}
+      {/* Powered by Pewaca */}
       <div className="text-center">
         <p className="text-xs text-muted-foreground">
-          Pembayaran diproses oleh <strong>DOKU</strong> — Payment Gateway terpercaya sejak 2007
+          Pembayaran QRIS diproses oleh <strong>Pewaca</strong> — Payment Gateway QRIS terpercaya
         </p>
       </div>
 

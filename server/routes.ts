@@ -335,6 +335,122 @@ export async function registerRoutes(
     res.json(subscription || null);
   });
 
+  // ============= QRIS PAYMENT (Django Storify-Subscription API) ROUTES =============
+
+  // Get QRIS subscription plans (proxy to Django)
+  app.get('/api/qris/plans', async (req, res) => {
+    try {
+      const { fetchQrisPlans } = await import("./pewaca");
+      const plans = await fetchQrisPlans();
+      res.json(plans);
+    } catch (error: any) {
+      console.error("Error fetching QRIS plans:", error.message);
+      // Fallback: return hardcoded plans if Django API is unreachable
+      const fallbackPlans = [
+        { id: 1, name: "Mingguan", price: 15000, durationDays: 7, description: "Akses unlimited selama 1 minggu", isActive: true },
+        { id: 2, name: "Bulanan", price: 49000, durationDays: 30, description: "Akses unlimited selama 1 bulan - BEST VALUE", isActive: true },
+        { id: 3, name: "Tahunan", price: 399000, durationDays: 365, description: "Akses unlimited selama 1 tahun", isActive: true },
+      ];
+      console.log("[QRIS] Using fallback plans");
+      res.json(fallbackPlans);
+    }
+  });
+
+  // Create QRIS payment transaction (proxy to Django)
+  app.post('/api/qris/payment/create', isAuthenticated, async (req: any, res) => {
+    const { planId } = req.body;
+
+    if (!planId) {
+      return res.status(400).json({ message: "Plan ID is required" });
+    }
+
+    try {
+      const { createQrisPayment } = await import("./pewaca");
+
+      // Pass Storify user info so Django can create/find StorifyUser
+      const userInfo = {
+        email: req.user.email || "",
+        name: req.user.name || req.user.firstName || "User",
+        storifyUserId: String(req.user.id),
+      };
+
+      const transaction = await createQrisPayment(planId, userInfo);
+
+      // Log activity locally
+      const userId = req.user.id || req.user.claims?.sub;
+      if (userId) {
+        logActivity(req, userId, "create_qris_payment", "subscription", planId.toString(), {
+          planName: transaction.plan?.name,
+          amount: transaction.amount,
+          qrisInvoiceId: transaction.qrisInvoiceId,
+        });
+      }
+
+      res.json(transaction);
+    } catch (error: any) {
+      console.error("Error creating QRIS payment:", error);
+      res.status(500).json({ message: error.message || "Failed to create QRIS payment" });
+    }
+  });
+
+  // Check QRIS payment status (proxy to Django, used for polling)
+  app.get('/api/qris/payment/:transactionId', isAuthenticated, async (req: any, res) => {
+    const { transactionId } = req.params;
+
+    try {
+      const { checkQrisPaymentStatus } = await import("./pewaca");
+      const transaction = await checkQrisPaymentStatus(transactionId);
+
+      // If payment just succeeded, log locally and create local subscription
+      if (transaction.status === 'paid') {
+        const userId = req.session?.user?.id || req.user?.id || req.user?.claims?.sub;
+        if (userId && transaction.plan) {
+          // Also create subscription in local DB for consistency
+          try {
+            await storage.createSubscription(userId, transaction.plan.id, transaction.id);
+          } catch (e) {
+            // May fail if already created - that's OK
+            console.log("[QRIS] Local subscription creation skipped (may already exist):", (e as any).message);
+          }
+        }
+      }
+
+      res.json(transaction);
+    } catch (error: any) {
+      console.error("Error checking QRIS payment status:", error);
+      res.status(500).json({ message: error.message || "Failed to check payment status" });
+    }
+  });
+
+  // Get QRIS active subscription (proxy to Django)
+  app.get('/api/qris/subscription/active', isAuthenticated, async (req: any, res) => {
+    try {
+      const { fetchQrisActiveSubscription } = await import("./pewaca");
+      const storifyUserId = String(req.user.id);
+
+      const subscription = await fetchQrisActiveSubscription(storifyUserId);
+      res.json(subscription);
+    } catch (error: any) {
+      console.error("Error fetching QRIS subscription:", error.message);
+      // Return null (no active subscription) instead of 500 so UI doesn't break
+      res.json(null);
+    }
+  });
+
+  // Pewaca webhook for QRIS payment notification
+  app.post('/api/webhook/pewaca', async (req, res) => {
+    try {
+      console.log("[Pewaca Webhook] Received:", JSON.stringify(req.body, null, 2));
+      // Acknowledge webhook - Django handles the subscription activation
+      res.status(200).json({ message: "OK" });
+    } catch (error: any) {
+      console.error("Error processing Pewaca webhook:", error);
+      res.status(500).json({ message: error.message || "Webhook processing failed" });
+    }
+  });
+
+  // ============= DOKU PAYMENT ROUTES =============
+
   // Create payment transaction (generate DOKU Checkout)
   app.post('/api/payment/create', isAuthenticated, async (req: any, res) => {
     const userId = req.user.id;

@@ -1,16 +1,22 @@
+import { useState } from "react";
 import { DokuPayment } from "@/components/DokuPayment";
+import { QrisPayment } from "@/components/QrisPayment";
 import { useActiveSubscription, useListeningStatus } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Music, Headphones, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Crown, Music, Headphones, Clock, CheckCircle, AlertCircle, QrCode, CreditCard, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+
+type PaymentTab = "qris" | "doku";
 
 export default function Subscription() {
   const { user } = useAuth();
   const { data: listeningStatus } = useListeningStatus();
   const { data: activeSubscription } = useActiveSubscription();
   const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<PaymentTab>("qris");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -110,15 +116,62 @@ export default function Subscription() {
           </Card>
         </div>
 
-        {/* DOKU Payment Component */}
-        <DokuPayment 
-          onSuccess={() => {
-            // Navigate to home or explore after successful payment
-          }}
-          onClose={() => {
-            setLocation("/explore");
-          }}
-        />
+        {/* Payment Method Tabs */}
+        <div className="space-y-4">
+          {/* Tab Selector */}
+          <div className="flex bg-muted rounded-xl p-1.5 gap-1">
+            <button
+              onClick={() => setActiveTab("qris")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all",
+                activeTab === "qris"
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <QrCode className="w-4 h-4" />
+              QRIS
+              <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-green-500 hover:bg-green-500">
+                Aktif
+              </Badge>
+            </button>
+            <button
+              onClick={() => setActiveTab("doku")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all",
+                activeTab === "doku"
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <CreditCard className="w-4 h-4" />
+              DOKU
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                Maintenance
+              </Badge>
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div>
+            {activeTab === "qris" ? (
+              <QrisPayment
+                onSuccess={() => {}}
+                onClose={() => {
+                  setLocation("/explore");
+                }}
+              />
+            ) : (
+              <DokuPayment
+                onSuccess={() => {}}
+                onClose={() => {
+                  setLocation("/explore");
+                }}
+              />
+            )}
+          </div>
+        </div>
 
         {/* Comparison Table */}
         <Card>
@@ -187,14 +240,14 @@ export default function Subscription() {
             <div>
               <h4 className="font-medium">Bagaimana cara membayar?</h4>
               <p className="text-sm text-muted-foreground">
-                Pilih paket langganan, lalu Anda akan diarahkan ke halaman pembayaran DOKU. 
-                Pilih metode pembayaran seperti QRIS, Virtual Account (BCA, Mandiri, BRI, BNI), ShopeePay, atau OVO.
+                Pilih paket langganan, lalu scan QR Code QRIS menggunakan aplikasi e-wallet favorit Anda 
+                seperti GoPay, OVO, DANA, ShopeePay, LinkAja, atau mobile banking.
               </p>
             </div>
             <div>
               <h4 className="font-medium">Apakah pembayaran aman?</h4>
               <p className="text-sm text-muted-foreground">
-                Ya, semua transaksi diproses oleh DOKU — payment gateway Indonesia yang terdaftar di Bank Indonesia dan bersertifikat PCI DSS Level 1.
+                Ya, semua transaksi QRIS diproses secara aman melalui sistem pembayaran yang terdaftar di Bank Indonesia.
               </p>
             </div>
             <div>

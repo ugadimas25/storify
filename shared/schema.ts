@@ -78,13 +78,14 @@ export const listeningHistory = pgTable("listening_history", {
   playedAt: timestamp("played_at").defaultNow().notNull(),
 });
 
-// Payment transactions for DOKU
+// Payment transactions for DOKU and QRIS (Pewaca)
 export const paymentTransactions = pgTable("payment_transactions", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
   planId: integer("plan_id").notNull(),
   amount: integer("amount").notNull(),
   status: text("status").notNull().default("pending"), // pending, paid, expired, failed
+  paymentGateway: text("payment_gateway").notNull().default("doku"), // 'doku' | 'qris_pewaca'
   
   // DOKU specific fields
   dokuInvoiceNumber: text("doku_invoice_number"), // Our invoice number sent to DOKU
@@ -94,6 +95,12 @@ export const paymentTransactions = pgTable("payment_transactions", {
   dokuPaymentMethod: text("doku_payment_method"), // VIRTUAL_ACCOUNT, QRIS, EMONEY, etc
   dokuPaymentChannel: text("doku_payment_channel"), // BCA, GOPAY, OVO, etc
   dokuRequestId: text("doku_request_id"), // Unique request ID for DOKU
+  
+  // QRIS Pewaca specific fields
+  qrisContent: text("qris_content"), // QR Code content string
+  qrisInvoiceId: text("qris_invoice_id"), // Pewaca invoice ID
+  qrisTransactionNumber: text("qris_transaction_number"), // Pewaca transaction number
+  paymentMethodBy: text("payment_method_by"), // GoPay, OVO, DANA, etc (for QRIS)
   
   expiredAt: timestamp("expired_at"),
   paidAt: timestamp("paid_at"),
