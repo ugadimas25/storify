@@ -233,8 +233,14 @@ export async function createQrisPayment(
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Failed to create QRIS payment (${response.status})`);
+    const errorText = await response.text();
+    console.error(`[Pewaca] Create payment failed (${response.status}):`, errorText);
+    let errorMessage = `Failed to create QRIS payment (${response.status})`;
+    try {
+      const errorData = JSON.parse(errorText);
+      errorMessage = errorData.message || errorData.detail || errorData.error || JSON.stringify(errorData);
+    } catch {}
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
