@@ -42,7 +42,8 @@ async function updateCosFilenames() {
           .where(eq(books.id, book.id));
         
         updated++;
-        console.log(`✓ [${book.id}] ${book.title.substring(0, 50)}... → ${filename.substring(0, 40)}...`);
+        const titleDisplay = (book as any).titleFix || (book as any).title || '';
+        console.log(`✓ [${book.id}] ${titleDisplay.substring(0, 50)}... → ${filename.substring(0, 40)}...`);
       } else {
         console.log(`⚠️  [${book.id}] Could not extract filename from: ${book.audioUrl}`);
         failed++;

@@ -1,6 +1,6 @@
 import { db } from '../server/db';
 import { books } from '../shared/schema';
-import { ilike } from 'drizzle-orm';
+import { ilike, or, sql } from 'drizzle-orm';
 
 async function search() {
   const queries = [
@@ -16,9 +16,15 @@ async function search() {
   ];
   
   for (const q of queries) {
-    const results = await db.select({ id: books.id, title: books.title })
+    const results = await db.select({ 
+      id: books.id, 
+      title: sql`COALESCE(${books.titleFix}, ${books.title})`.as('title')
+    })
       .from(books)
-      .where(ilike(books.title, q));
+      .where(or(
+        ilike(books.titleFix, q),
+        ilike(books.title, q)
+      ));
     console.log(`Query: ${q} → ${results.length} results`);
     for (const r of results.slice(0, 5)) {
       console.log(`  [${r.id}] ${r.title}`);

@@ -90,3 +90,72 @@
     scrollbar-width: none;
   }
 }
+
+/* Netflix-style desktop enhancements */
+@layer components {
+  /* Smooth hover transitions for all interactive elements */
+  .book-card-hover {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .book-card-hover:hover {
+    transform: scale(1.03);
+    box-shadow: 0 10px 40px -15px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Desktop-optimized container widths */
+  @screen lg {
+    .container-desktop {
+      max-width: 1280px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+
+  @screen xl {
+    .container-desktop {
+      max-width: 1440px;
+    }
+  }
+
+  /* Netflix-style row hover effect */
+  .netflix-row {
+    transition: all 0.2s ease-out;
+  }
+
+  .netflix-row:hover .netflix-row-title {
+    @apply text-primary;
+  }
+
+  /* Glassmorphism cards */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .glass-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Desktop hero adjustments */
+  @screen lg {
+    .hero-desktop {
+      padding-top: 4rem;
+      padding-bottom: 3rem;
+    }
+    
+    .hero-title-desktop {
+      font-size: 2.5rem;
+      line-height: 1.2;
+    }
+  }
+
+  @screen xl {
+    .hero-title-desktop {
+      font-size: 3rem;
+    }
+  }
+}

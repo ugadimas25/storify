@@ -6,8 +6,8 @@ import { BookCard } from "@/components/BookCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
-import { Search, Play, ChevronLeft, ChevronRight, Headphones, BookOpen, Sparkles, ArrowRight } from "lucide-react";
-import { useRef, useState, useCallback } from "react";
+import { Search, Play, ChevronLeft, ChevronRight, Headphones, BookOpen, Sparkles, ArrowRight, Clock } from "lucide-react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Book } from "@shared/schema";
@@ -81,94 +81,94 @@ export default function Home() {
         <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-[#41b6c4]/20 rounded-full blur-2xl" />
         <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-[#ffffcc]/10 rounded-full blur-2xl" />
 
-        <div className="relative px-6 pt-12 pb-8">
+        <div className="relative px-6 pt-12 pb-8 lg:pt-16 lg:pb-12 max-w-7xl mx-auto">
           {user ? (
             /* Logged-in hero */
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
+              className="space-y-4 lg:space-y-6"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/70 text-sm font-medium">{getTimeGreeting()} 👋</p>
-                  <h1 className="text-2xl font-bold text-white mt-1">
+                  <p className="text-white/70 text-sm md:text-base font-medium">{getTimeGreeting()} 👋</p>
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1">
                     {user.firstName || 'Reader'}
                   </h1>
                 </div>
                 <button
                   onClick={() => setLocation("/explore")}
-                  className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center"
+                  className="w-10 h-10 md:w-12 md:h-12 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/25 transition-colors"
                 >
-                  <Search className="w-5 h-5 text-white" />
+                  <Search className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </button>
               </div>
 
-              {/* Quick stats bar */}
-              <div className="flex gap-3 mt-4">
-                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
-                  <Headphones className="w-5 h-5 text-white/80 mx-auto mb-1" />
-                  <p className="text-xs text-white/60">Listening</p>
-                  <p className="text-lg font-bold text-white">{recentlyPlayed?.length || 0}</p>
+              {/* Quick stats bar - larger on desktop */}
+              <div className="flex gap-3 md:gap-4 lg:gap-6 mt-4 lg:mt-6">
+                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 md:p-4 lg:p-5 text-center hover:bg-white/20 transition-colors">
+                  <Headphones className="w-5 h-5 md:w-6 md:h-6 text-white/80 mx-auto mb-1" />
+                  <p className="text-xs md:text-sm text-white/60">Listening</p>
+                  <p className="text-lg md:text-xl lg:text-2xl font-bold text-white">{recentlyPlayed?.length || 0}</p>
                 </div>
-                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
-                  <BookOpen className="w-5 h-5 text-white/80 mx-auto mb-1" />
-                  <p className="text-xs text-white/60">Library</p>
-                  <p className="text-lg font-bold text-white">{allBooks?.length || 0}</p>
+                <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 md:p-4 lg:p-5 text-center hover:bg-white/20 transition-colors">
+                  <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-white/80 mx-auto mb-1" />
+                  <p className="text-xs md:text-sm text-white/60">Library</p>
+                  <p className="text-lg md:text-xl lg:text-2xl font-bold text-white">{allBooks?.length || 0}</p>
                 </div>
                 <div
-                  className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center cursor-pointer hover:bg-white/20 transition-colors"
+                  className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 md:p-4 lg:p-5 text-center cursor-pointer hover:bg-white/25 transition-colors"
                   onClick={() => setLocation("/explore")}
                 >
-                  <Sparkles className="w-5 h-5 text-[#ffffcc] mx-auto mb-1" />
-                  <p className="text-xs text-white/60">Explore</p>
-                  <p className="text-lg font-bold text-white">
-                    <ArrowRight className="w-5 h-5 mx-auto" />
+                  <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-[#ffffcc] mx-auto mb-1" />
+                  <p className="text-xs md:text-sm text-white/60">Explore</p>
+                  <p className="text-lg md:text-xl lg:text-2xl font-bold text-white">
+                    <ArrowRight className="w-5 h-5 md:w-6 md:h-6 mx-auto" />
                   </p>
                 </div>
               </div>
             </motion.div>
           ) : (
-            /* Guest hero */
+            /* Guest hero - improved for desktop */
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center space-y-5"
+              className="text-center space-y-5 lg:space-y-8 lg:py-8"
             >
               {/* Logo / Brand */}
-              <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 mx-auto">
-                <Headphones className="w-4 h-4 text-[#ffffcc]" />
-                <span className="text-sm font-semibold text-white">Storify Insights</span>
+              <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 md:px-5 md:py-2 mx-auto">
+                <Headphones className="w-4 h-4 md:w-5 md:h-5 text-[#ffffcc]" />
+                <span className="text-sm md:text-base font-semibold text-white">Storify Insights</span>
               </div>
 
-              <div className="space-y-3">
-                <h1 className="text-3xl font-bold text-white leading-tight">
+              <div className="space-y-3 lg:space-y-4">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
                   Dengarkan Ringkasan<br />
                   <span className="bg-gradient-to-r from-[#ffffcc] to-[#a1dab4] bg-clip-text text-transparent">
                     Buku Terbaik
                   </span>
                 </h1>
-                <p className="text-white/70 text-sm max-w-xs mx-auto leading-relaxed">
+                <p className="text-white/70 text-sm md:text-base lg:text-lg max-w-xs md:max-w-md lg:max-w-xl mx-auto leading-relaxed">
                   Akses ratusan ringkasan audiobook kapan saja, di mana saja. Belajar lebih cepat, lebih cerdas.
                 </p>
               </div>
 
-              <div className="flex gap-3 justify-center pt-2">
+              <div className="flex gap-3 md:gap-4 justify-center pt-2">
                 <Button
                   size="lg"
                   onClick={() => setLocation("/auth/signin")}
                   variant="outline"
-                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white rounded-xl px-6 backdrop-blur-sm"
+                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white rounded-xl px-6 md:px-8 backdrop-blur-sm md:text-base lg:text-lg"
                 >
                   Masuk
                 </Button>
                 <Button
                   size="lg"
                   onClick={() => setLocation("/auth/signup")}
-                  className="bg-[#ffffcc] text-[#253494] hover:bg-[#ffffcc]/90 rounded-xl px-6 font-semibold shadow-lg shadow-black/10"
+                  className="bg-[#ffffcc] text-[#253494] hover:bg-[#ffffcc]/90 rounded-xl px-6 md:px-8 font-semibold shadow-lg shadow-black/10 md:text-base lg:text-lg"
                 >
                   Daftar Gratis
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                  <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-1" />
                 </Button>
               </div>
 
@@ -176,12 +176,12 @@ export default function Home() {
               <div className="flex items-center justify-center gap-1.5 pt-1">
                 <div className="flex -space-x-2">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="w-6 h-6 rounded-full bg-white/20 border-2 border-[#2c7fb8] flex items-center justify-center">
-                      <span className="text-[8px] text-white font-bold">{['A', 'R', 'M'][i-1]}</span>
+                    <div key={i} className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white/20 border-2 border-[#2c7fb8] flex items-center justify-center">
+                      <span className="text-[8px] md:text-[10px] text-white font-bold">{['A', 'R', 'M'][i-1]}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-white/60 ml-1">Bergabung dengan 1000+ pembaca</p>
+                <p className="text-xs md:text-sm text-white/60 ml-1">Bergabung dengan 1000+ pembaca</p>
               </div>
             </motion.div>
           )}
@@ -198,19 +198,19 @@ export default function Home() {
       <main className="space-y-8 pt-2">
         {/* Continue Listening Section - Only show if user has recently played books */}
         {user && recentlyPlayed && recentlyPlayed.length > 0 && (
-          <section>
-            <div className="px-6 mb-4 flex justify-between items-end">
+          <section className="max-w-7xl mx-auto">
+            <div className="px-4 sm:px-6 lg:px-8 mb-4 flex justify-between items-end">
               <div>
-                <h2 className="text-lg font-bold font-display">Continue Listening</h2>
-                <p className="text-xs text-muted-foreground">Pick up where you left off</p>
+                <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">Continue Listening</h2>
+                <p className="text-xs md:text-sm text-muted-foreground">Pick up where you left off</p>
               </div>
             </div>
             
-            <div className="overflow-x-auto hide-scrollbar px-6 pb-4">
-              <div className="flex gap-4 w-max">
+            <div className="overflow-x-auto hide-scrollbar px-4 sm:px-6 lg:px-8 pb-4">
+              <div className="flex gap-4 md:gap-6 w-max">
                 {loadingRecent ? (
                   Array.from({ length: 2 }).map((_, i) => (
-                    <Skeleton key={i} className="h-24 w-72 rounded-xl" />
+                    <Skeleton key={i} className="h-24 w-72 md:w-80 rounded-xl" />
                   ))
                 ) : (
                   recentlyPlayed.slice(0, 5).map((book, idx) => (
@@ -219,36 +219,40 @@ export default function Home() {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.1 }}
-                      className="bg-card rounded-xl p-3 flex gap-3 min-w-[280px] max-w-[300px] border border-border/50 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      className="bg-card rounded-xl md:rounded-2xl p-3 md:p-4 flex gap-3 md:gap-4 min-w-[280px] md:min-w-[320px] max-w-[320px] md:max-w-[380px] border border-border/50 shadow-sm hover:shadow-lg transition-all cursor-pointer hover:border-primary/30 hover:scale-[1.01]"
                       onClick={() => playBook(book, book.currentTime)}
                     >
-                      <div className="relative w-16 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                      <div className="relative w-16 h-20 md:w-20 md:h-24 rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 shadow-md">
                         <img 
                           src={book.coverUrl} 
                           alt={book.title}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder-book.svg';
+                          }}
                         />
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                          <Play className="w-6 h-6 text-white fill-current" />
+                          <Play className="w-6 h-6 md:w-8 md:h-8 text-white fill-current" />
                         </div>
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
                         <div>
-                          <h3 className="font-semibold text-sm truncate">{book.title}</h3>
-                          <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+                          <h3 className="font-semibold text-sm md:text-base truncate">{book.title}</h3>
+                          <p className="text-xs md:text-sm text-muted-foreground truncate">{book.author}</p>
                         </div>
-                        <div className="space-y-1">
-                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="space-y-1.5">
+                          <div className="h-1.5 md:h-2 bg-muted rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-primary rounded-full transition-all"
                               style={{ width: `${book.progress}%` }}
                             />
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[10px] md:text-xs text-muted-foreground">
                               {Math.round(book.progress)}% completed
                             </span>
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[10px] md:text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
                               {formatTime(book.currentTime)}
                             </span>
                           </div>
@@ -262,39 +266,42 @@ export default function Home() {
           </section>
         )}
 
-        {/* Featured Section */}
+        {/* Featured Section - Netflix style horizontal slider */}
         <section className="relative group/featured">
-          <div className="px-6 mb-4 flex justify-between items-end">
-            <h2 className="text-lg font-bold font-display">Featured</h2>
-            <div className="flex items-center gap-2">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 flex justify-between items-end">
+            <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">Featured</h2>
+            <div className="flex items-center gap-2 md:gap-3">
               <button
                 onClick={() => scrollFeatured("left")}
-                className={`w-8 h-8 rounded-full border border-border flex items-center justify-center transition-all ${canScrollLeft ? 'bg-primary text-primary-foreground shadow-sm hover:shadow-md' : 'bg-muted/50 text-muted-foreground/40 cursor-default'}`}
+                className={`w-8 h-8 md:w-10 md:h-10 rounded-full border border-border flex items-center justify-center transition-all ${canScrollLeft ? 'bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:scale-105' : 'bg-muted/50 text-muted-foreground/40 cursor-default'}`}
                 disabled={!canScrollLeft}
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
               </button>
               <button
                 onClick={() => scrollFeatured("right")}
-                className={`w-8 h-8 rounded-full border border-border flex items-center justify-center transition-all ${canScrollRight ? 'bg-primary text-primary-foreground shadow-sm hover:shadow-md' : 'bg-muted/50 text-muted-foreground/40 cursor-default'}`}
+                className={`w-8 h-8 md:w-10 md:h-10 rounded-full border border-border flex items-center justify-center transition-all ${canScrollRight ? 'bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:scale-105' : 'bg-muted/50 text-muted-foreground/40 cursor-default'}`}
                 disabled={!canScrollRight}
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
               </button>
-              <Link href="/explore" className="text-xs font-semibold text-primary ml-1">View All</Link>
+              <Link href="/explore" className="text-xs md:text-sm font-semibold text-primary ml-1 hover:underline">View All</Link>
             </div>
           </div>
           
           <div
             ref={featuredRef}
             onScroll={(e) => updateScrollState(e.currentTarget)}
-            className="overflow-x-auto hide-scrollbar px-6 pb-4 -mx-0 scroll-smooth"
+            className="overflow-x-auto hide-scrollbar scroll-smooth"
           >
-            <div className="flex gap-4 w-max">
+            <div className="flex gap-4 md:gap-6 w-max px-4 sm:px-6 lg:px-8 pb-4">
+              {/* Add padding element for proper edge alignment on large screens */}
+              <div className="hidden lg:block w-[calc((100vw-1280px)/2)] flex-shrink-0" />
+              
               {loadingFeatured ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="w-[140px] space-y-3">
-                    <Skeleton className="h-[210px] w-full rounded-xl" />
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="w-[140px] md:w-[180px] lg:w-[200px] space-y-3 flex-shrink-0">
+                    <Skeleton className="aspect-[2/3] w-full rounded-xl" />
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-3 w-1/2" />
                   </div>
@@ -305,24 +312,57 @@ export default function Home() {
                     key={book.id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.1 }}
+                    transition={{ delay: idx * 0.05 }}
                   >
-                    <BookCard book={book} />
+                    <BookCard book={book} variant="featured" />
                   </motion.div>
                 ))
               )}
+              
+              {/* Add padding element for proper edge alignment on large screens */}
+              <div className="hidden lg:block w-[calc((100vw-1280px)/2)] flex-shrink-0" />
             </div>
           </div>
         </section>
 
-        {/* New Arrivals Section */}
-        <section className="px-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-bold font-display">New Arrivals</h2>
-            <p className="text-xs text-muted-foreground">Fresh summaries just for you</p>
+        {/* New Arrivals Section - Grid on desktop */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-4 md:mb-6 flex justify-between items-end">
+            <div>
+              <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">New Arrivals</h2>
+              <p className="text-xs md:text-sm text-muted-foreground">Fresh summaries just for you</p>
+            </div>
+            <Link href="/explore" className="text-xs md:text-sm font-semibold text-primary hover:underline">
+              See All <ArrowRight className="w-3 h-3 md:w-4 md:h-4 inline ml-1" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          {/* Mobile: List view, Desktop: Grid view */}
+          <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+            {loadingAll ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="aspect-[2/3] rounded-xl w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))
+            ) : (
+              allBooks?.slice(0, 8).map((book, idx) => (
+                <motion.div
+                  key={book.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + (idx * 0.03) }}
+                >
+                  <BookCard book={book} showDuration />
+                </motion.div>
+              ))
+            )}
+          </div>
+
+          {/* Mobile: Horizontal list */}
+          <div className="md:hidden grid grid-cols-1 gap-4">
             {loadingAll ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex gap-4">

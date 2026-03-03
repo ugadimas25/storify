@@ -6,6 +6,7 @@
 import COS from 'cos-nodejs-sdk-v5';
 import fs from 'fs';
 import path from 'path';
+import { COVER_EXTENSIONS } from './cover-extensions';
 
 // Initialize COS client
 export function createCOSClient(): COS {
@@ -199,4 +200,51 @@ export async function listCOSFiles(prefix: string = ''): Promise<string[]> {
       }
     );
   });
+}
+
+/**
+ * Get cover image URL from pewacaold bucket
+ * Tries different image extensions: jpg, jpeg, png, webp
+ */
+export async function getCoverImageUrl(bookId: number): Promise<string | null> {
+  const bucket = 'pewacaold-1379748683';
+  const region = 'ap-jakarta';
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
+  
+  // Try each extension
+  for (const ext of imageExtensions) {
+    const key = `image/${bookId}.${ext}`;
+    const url = `https://${bucket}.cos.${region}.myqcloud.com/${key}`;
+    
+    // Check if file exists by making HEAD request
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) {
+        return url;
+      }
+    } catch (error) {
+      // Continue to next extension
+      continue;
+    }
+  }
+  
+  return null; // No cover image found
+}
+
+/**
+ * Generate cover URL for a book with correct extension
+ * Uses mapping from cover-extensions.ts or returns placeholder if not found
+ */
+export function generateCoverUrl(bookId: number): string {
+  // Check if this book has a cover image
+  if (!COVER_EXTENSIONS[bookId]) {
+    // Return local placeholder image for books without covers
+    return '/placeholder-book.svg';
+  }
+  
+  const bucket = 'pewacaold-1379748683';
+  const region = 'ap-jakarta';
+  const extension = COVER_EXTENSIONS[bookId];
+  
+  return `https://${bucket}.cos.${region}.myqcloud.com/image/${bookId}.${extension}`;
 }

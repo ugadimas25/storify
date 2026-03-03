@@ -160,7 +160,10 @@ async function fixAudioMatching() {
   
   // Step 2: Reset ALL books to dummy audio
   console.log("Step 1: Resetting ALL books to dummy audio...");
-  const allBooks = await db.select({ id: books.id, title: books.title }).from(books);
+  const allBooks = await db.select({ 
+    id: books.id, 
+    title: sql`COALESCE(${books.titleFix}, ${books.title})`.as('title')
+  }).from(books);
   console.log(`  Total books in database: ${allBooks.length}`);
   
   let resetCount = 0;
@@ -194,9 +197,15 @@ async function fixAudioMatching() {
     let matchedBooks: { id: number; title: string }[] = [];
     
     for (const pattern of audioEntry.titlePatterns) {
-      const found = await db.select({ id: books.id, title: books.title })
+      const found = await db.select({ 
+        id: books.id, 
+        title: sql`COALESCE(${books.titleFix}, ${books.title})`.as('title')
+      })
         .from(books)
-        .where(ilike(books.title, pattern));
+        .where(or(
+          ilike(books.titleFix, pattern),
+          ilike(books.title, pattern)
+        ));
       
       // Add to matched (deduplicate by id)
       for (const b of found) {

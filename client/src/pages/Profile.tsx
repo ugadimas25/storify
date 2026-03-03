@@ -40,29 +40,31 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-6 py-4">
-        <h1 className="text-2xl font-display font-bold">Profile</h1>
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-6 lg:px-8 py-4 lg:py-6 border-b border-border/50">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold">Profile</h1>
+        </div>
       </div>
 
-      <div className="flex flex-col items-center pt-8 pb-12 px-6">
-        <Avatar className="w-24 h-24 mb-4 ring-4 ring-background shadow-xl">
+      <div className="flex flex-col items-center pt-8 lg:pt-12 pb-12 px-6 max-w-3xl mx-auto">
+        <Avatar className="w-24 h-24 md:w-32 md:h-32 mb-4 ring-4 ring-background shadow-xl">
           <AvatarImage src={user.profileImageUrl || undefined} />
-          <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
+          <AvatarFallback className="bg-primary/10 text-primary text-2xl md:text-4xl font-bold">
             {user.firstName?.[0] || user.email?.[0] || "U"}
           </AvatarFallback>
         </Avatar>
         
-        <h2 className="text-xl font-bold">{user.firstName} {user.lastName}</h2>
-        <p className="text-muted-foreground">{user.email}</p>
+        <h2 className="text-xl md:text-2xl lg:text-3xl font-bold">{user.firstName} {user.lastName}</h2>
+        <p className="text-muted-foreground md:text-lg">{user.email}</p>
         
-        <div className="w-full max-w-sm mt-12 space-y-3">
+        <div className="w-full max-w-md mt-12 space-y-3 md:space-y-4">
           {menuItems.map((item) => (
             <Button
               key={item.label}
               variant="outline"
-              className="w-full justify-start h-14 text-base font-normal rounded-xl bg-card hover:bg-muted/50 border-border/50"
+              className="w-full justify-start h-14 md:h-16 text-base md:text-lg font-normal rounded-xl bg-card hover:bg-muted/50 border-border/50 transition-all hover:scale-[1.01] hover:shadow-sm"
             >
-              <item.icon className="w-5 h-5 mr-3 text-muted-foreground" />
+              <item.icon className="w-5 h-5 md:w-6 md:h-6 mr-3 text-muted-foreground" />
               {item.label}
             </Button>
           ))}
@@ -70,11 +72,11 @@ export default function Profile() {
           <div className="pt-8">
             <Button 
               variant="destructive" 
-              className="w-full h-14 rounded-xl"
+              className="w-full h-14 md:h-16 rounded-xl text-base md:text-lg"
               onClick={() => logout()}
               disabled={isLoggingOut}
             >
-              <LogOut className="w-5 h-5 mr-2" />
+              <LogOut className="w-5 h-5 md:w-6 md:h-6 mr-2" />
               {isLoggingOut ? "Signing out..." : "Sign Out"}
             </Button>
           </div>

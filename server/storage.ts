@@ -6,6 +6,7 @@ import {
   type SubscriptionPlan, type Subscription, type ListeningHistory, type PaymentTransaction
 } from "@shared/schema";
 import { eq, and, desc, like, notLike, sql, gte, or, isNull } from "drizzle-orm";
+import { generateCoverUrl } from "./cos";
 
 // Listening limits
 const GUEST_LISTEN_LIMIT = 1;
@@ -74,29 +75,80 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getBooks(params?: { search?: string; category?: string; featured?: boolean }): Promise<Book[]> {
-    let query = db.select().from(books);
+    // Only select columns that exist in books_list table
+    let query = db
+      .select({
+        id: books.id,
+        title: books.title,
+        titleFix: books.titleFix,
+        author: books.author,
+        category: books.category,
+      })
+      .from(books);
+
     const conditions = [];
 
-    // Filter out books with dummy audio URLs (only show real COS audio)
-    conditions.push(notLike(books.audioUrl, '%soundhelix%'));
-
     if (params?.search) {
-      conditions.push(like(books.title, `%${params.search}%`));
+      // Search in both titleFix and title
+      const searchPattern = `%${params.search}%`;
+      conditions.push(or(
+        like(books.titleFix, searchPattern),
+        like(books.title, searchPattern)
+      ));
     }
     if (params?.category) {
       conditions.push(eq(books.category, params.category));
     }
-    if (params?.featured !== undefined) {
-      conditions.push(eq(books.isFeatured, params.featured));
+
+    if (conditions.length > 0) {
+      //@ts-ignore
+      query = query.where(and(...conditions)) as any;
     }
 
-    // @ts-ignore - AND logic handling
-    return await query.where(and(...conditions)).orderBy(desc(books.id));
+    const rawBooks = await query.orderBy(desc(books.id));
+
+    // Map to Book type with defaults for missing columns
+    return rawBooks.map((book: any) => ({
+      id: book.id,
+      title: book.titleFix || book.title || 'Untitled',
+      author: book.author || 'Unknown Author',
+      description: 'Deskripsi buku akan segera tersedia.',
+      coverUrl: generateCoverUrl(book.id),
+      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      cosFilename: null,
+      duration: 180, // 3 minutes default
+      category: book.category || 'Uncategorized',
+      isFeatured: false,
+    }));
   }
 
   async getBook(id: number): Promise<Book | undefined> {
-    const [book] = await db.select().from(books).where(eq(books.id, id));
-    return book;
+    const [rawBook] = await db
+      .select({
+        id: books.id,
+        title: books.title,
+        titleFix: books.titleFix,
+        author: books.author,
+        category: books.category,
+      })
+      .from(books)
+      .where(eq(books.id, id));
+    
+    if (!rawBook) return undefined;
+    
+    // Map to Book type with defaults for missing columns
+    return {
+      id: rawBook.id,
+      title: rawBook.titleFix || rawBook.title || 'Untitled',
+      author: rawBook.author || 'Unknown Author',
+      description: 'Deskripsi buku akan segera tersedia.',
+      coverUrl: generateCoverUrl(rawBook.id),
+      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      cosFilename: null,
+      duration: 180,
+      category: rawBook.category || 'Uncategorized',
+      isFeatured: false,
+    };
   }
 
   async createBook(book: InsertBook): Promise<Book> {
@@ -108,32 +160,38 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .selectDistinct({ category: books.category })
       .from(books)
+      .where(sql`${books.category} IS NOT NULL`)
       .orderBy(books.category);
-    return result.map(r => r.category);
+    return result.map(r => r.category).filter(c => c);
   }
 
   async getFavorites(userId: string): Promise<Book[]> {
-    // Join favorites with books (exclude dummy audio)
-    const result = await db
+    // Join favorites with books - only select existing columns
+    const rawResult = await db
       .select({
-        id: books.id,
-        title: books.title,
-        author: books.author,
-        description: books.description,
-        coverUrl: books.coverUrl,
-        audioUrl: books.audioUrl,
-        duration: books.duration,
-        category: books.category,
-        isFeatured: books.isFeatured,
+        bookId: books.id,
+        bookTitle: books.title,
+        bookTitleFix: books.titleFix,
+        bookAuthor: books.author,
+        bookCategory: books.category,
       })
       .from(favorites)
       .innerJoin(books, eq(favorites.bookId, books.id))
-      .where(and(
-        eq(favorites.userId, userId),
-        notLike(books.audioUrl, '%soundhelix%')
-      ));
+      .where(eq(favorites.userId, userId));
     
-    return result;
+    // Map to Book type with defaults
+    return rawResult.map((row: any) => ({
+      id: row.bookId,
+      title: row.bookTitleFix || row.bookTitle || 'Untitled',
+      author: row.bookAuthor || 'Unknown Author',
+      description: 'Deskripsi buku akan segera tersedia.',
+      coverUrl: generateCoverUrl(row.bookId),
+      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      cosFilename: null,
+      duration: 180,
+      category: row.bookCategory || 'Uncategorized',
+      isFeatured: false,
+    }));
   }
 
   async addFavorite(userId: string, bookId: number): Promise<void> {
@@ -182,30 +240,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentlyPlayed(userId: string, limit: number = 10): Promise<(Book & { progress: number; currentTime: number })[]> {
-    const result = await db
+    const rawResult = await db
       .select({
-        id: books.id,
-        title: books.title,
-        author: books.author,
-        description: books.description,
-        coverUrl: books.coverUrl,
-        audioUrl: books.audioUrl,
-        duration: books.duration,
-        category: books.category,
-        isFeatured: books.isFeatured,
+        bookId: books.id,
+        bookTitle: books.title,
+        bookTitleFix: books.titleFix,
+        bookAuthor: books.author,
+        bookCategory: books.category,
         progress: playbackProgress.progress,
         currentTime: playbackProgress.currentTime,
       })
       .from(playbackProgress)
       .innerJoin(books, eq(playbackProgress.bookId, books.id))
-      .where(and(
-        eq(playbackProgress.userId, userId),
-        notLike(books.audioUrl, '%soundhelix%')
-      ))
+      .where(eq(playbackProgress.userId, userId))
       .orderBy(desc(playbackProgress.updatedAt))
       .limit(limit);
     
-    return result;
+    // Map to Book type with progress and defaults
+    return rawResult.map((row: any) => ({
+      id: row.bookId,
+      title: row.bookTitleFix || row.bookTitle || 'Untitled',
+      author: row.bookAuthor || 'Unknown Author',
+      description: 'Deskripsi buku akan segera tersedia.',
+      coverUrl: generateCoverUrl(row.bookId),
+      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      cosFilename: null,
+      duration: 180,
+      category: row.bookCategory || 'Uncategorized',
+      isFeatured: false,
+      progress: row.progress,
+      currentTime: row.currentTime,
+    }));
   }
 
   // Subscription Plans

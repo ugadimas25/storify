@@ -18,17 +18,19 @@ export const activityLogs = pgTable("activity_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const books = pgTable("books", {
+export const books = pgTable("books_list", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  author: text("author").notNull(),
-  description: text("description").notNull(),
-  coverUrl: text("cover_url").notNull(),
-  audioUrl: text("audio_url").notNull(),
-  cosFilename: text("cos_filename"), // COS filename for matching validation
-  duration: integer("duration").notNull(), // in seconds
-  category: text("category").notNull(),
-  isFeatured: boolean("is_featured").default(false).notNull(),
+  title: text("title"),
+  titleFix: text("fix_title"),  // Maps to fix_title column in database
+  author: text("author"),
+  description: text("description"),
+  coverUrl: text("cover_url"),
+  audioUrl: text("audio_url"),
+  cosFilename: text("cos_filename"),
+  duration: integer("duration"), // in seconds
+  category: text("category"),
+  isFeatured: boolean("is_featured").default(false),
+  isBestSeller: boolean("is_best_seller").default(false),
 });
 
 export const favorites = pgTable("favorites", {

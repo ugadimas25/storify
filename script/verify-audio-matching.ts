@@ -12,7 +12,7 @@
 import 'dotenv/config';
 import { db } from '../server/db';
 import { books } from '../shared/schema';
-import { isNull, isNotNull, like, notLike } from 'drizzle-orm';
+import { isNull, isNotNull, like, notLike, sql } from 'drizzle-orm';
 
 interface BookAudioReport {
   totalBooks: number;
@@ -63,7 +63,7 @@ async function verifyAudioMatching(): Promise<BookAudioReport> {
         if (book.cosFilename !== extractedFilename) {
           report.mismatches.push({
             id: book.id,
-            title: book.title,
+            title: (book as any).titleFix || (book as any).title || '',
             audioUrl: book.audioUrl,
             cosFilename: book.cosFilename,
             expectedFilename: extractedFilename,
@@ -118,11 +118,11 @@ async function printReport() {
   const sampleCosBooks = await db
     .select({
       id: books.id,
-      title: books.title,
+      title: sql`COALESCE(${books.titleFix}, ${books.title})`.as('title'),
       cosFilename: books.cosFilename,
     })
     .from(books)
-    .where(notLike(books.audioUrl, '%soundhelix%'))
+    .where(sql`${books.audioUrl} IS NOT NULL`)
     .limit(5);
   
   if (sampleCosBooks.length > 0) {
