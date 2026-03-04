@@ -248,3 +248,16 @@ export function generateCoverUrl(bookId: number): string {
   
   return `https://${bucket}.cos.${region}.myqcloud.com/image/${bookId}.${extension}`;
 }
+
+/**
+ * Generate audio URL for a book from COS bucket
+ * Audio files are stored in the 'audio' folder, named by book ID
+ */
+export function generateAudioUrl(bookId: number): string {
+  const bucket = 'pewacaold-1379748683';
+  const region = 'ap-jakarta';
+  
+  // Assuming all audio files are in mp3 format
+  // If there are different formats, create an audio-extensions.ts mapping similar to cover-extensions.ts
+  return `https://${bucket}.cos.${region}.myqcloud.com/audio/${bookId}.mp3`;
+}

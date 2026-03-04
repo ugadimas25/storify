@@ -5,13 +5,16 @@ import { useFavorites, useToggleFavorite, useIsFavorite } from "@/hooks/use-favo
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Play, Pause, Heart, Share2, Clock } from "lucide-react";
+import { ArrowLeft, Play, Pause, Heart, Share2, Clock, BookOpen, Headphones } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { PDFReader } from "@/components/PDFReader";
+import { useState } from "react";
 
 export default function BookDetail() {
   const [, params] = useRoute("/book/:id");
   const id = parseInt(params?.id || "0");
+  const [showPDFReader, setShowPDFReader] = useState(false);
   
   const { data: book, isLoading } = useBook(id);
   const { currentBook, isPlaying, playBook, togglePlay } = useAudio();
@@ -22,6 +25,9 @@ export default function BookDetail() {
 
   const isCurrent = currentBook?.id === book?.id;
   const isPlayingCurrent = isCurrent && isPlaying;
+
+  // Generate PDF URL based on book ID
+  const pdfUrl = book ? `https://pewacaold-1379748683.cos.ap-jakarta.myqcloud.com/pdf/${book.id}.pdf` : null;
 
   if (isLoading) {
     return (
@@ -97,34 +103,74 @@ export default function BookDetail() {
             </div>
           </div>
 
-          {/* Play Action */}
-          <Button 
-            size="lg" 
-            className="w-full max-w-xs rounded-xl h-14 text-base font-semibold shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 transition-all hover:-translate-y-0.5"
-            onClick={() => isCurrent ? togglePlay() : playBook(book)}
-          >
-            {isPlayingCurrent ? (
-              <>
-                <Pause className="w-5 h-5 mr-2 fill-current" /> Pause
-              </>
-            ) : (
-              <>
-                <Play className="w-5 h-5 mr-2 fill-current" /> Play Summary
-              </>
-            )}
-          </Button>
+          {/* Action Buttons */}
+          <div className="w-full max-w-md space-y-3">
+            {/* Play Audio Summary */}
+            <Button 
+              size="lg" 
+              className="w-full rounded-xl h-14 text-base font-semibold shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 transition-all hover:-translate-y-0.5"
+              onClick={() => isCurrent ? togglePlay() : playBook(book)}
+            >
+              {isPlayingCurrent ? (
+                <>
+                  <Pause className="w-5 h-5 mr-2 fill-current" /> Pause Summary
+                </>
+              ) : (
+                <>
+                  <Headphones className="w-5 h-5 mr-2" /> Listen to Summary
+                </>
+              )}
+            </Button>
+
+            {/* Read Full Book - PDF available for all books */}
+            <Button 
+              size="lg" 
+              variant="outline"
+              className="w-full rounded-xl h-14 text-base font-semibold border-2 hover:bg-primary/5 transition-all"
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('Opening PDF reader for:', book.title, 'URL:', pdfUrl);
+                setShowPDFReader(true);
+              }}
+            >
+              <BookOpen className="w-5 h-5 mr-2" /> Read Full Book
+            </Button>
+          </div>
         </div>
 
         {/* Details Section */}
         <div className="px-6 max-w-2xl mx-auto space-y-6">
           <div>
-            <h3 className="text-lg font-bold font-display mb-3">About this summary</h3>
+            <h3 className="text-lg font-bold font-display mb-3">About this book</h3>
             <p className="text-muted-foreground leading-relaxed">
               {book.description}
             </p>
           </div>
+
+          {/* Format Info */}
+          <div className="grid grid-cols-2 gap-4 pt-4">
+            <div className="bg-secondary/30 rounded-lg p-4 text-center">
+              <Headphones className="w-6 h-6 mx-auto mb-2 text-primary" />
+              <p className="text-sm font-medium">Audio Summary</p>
+              <p className="text-xs text-muted-foreground mt-1">{Math.floor(book.duration / 60)} minutes</p>
+            </div>
+            <div className="bg-secondary/30 rounded-lg p-4 text-center">
+              <BookOpen className="w-6 h-6 mx-auto mb-2 text-primary" />
+              <p className="text-sm font-medium">Full Book (PDF)</p>
+              <p className="text-xs text-muted-foreground mt-1">Read Complete</p>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* PDF Reader Modal */}
+      {showPDFReader && pdfUrl && (
+        <PDFReader 
+          pdfUrl={pdfUrl} 
+          bookTitle={book.title} 
+          onClose={() => setShowPDFReader(false)}
+        />
+      )}
     </div>
   );
 }

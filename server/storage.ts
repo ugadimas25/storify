@@ -6,7 +6,7 @@ import {
   type SubscriptionPlan, type Subscription, type ListeningHistory, type PaymentTransaction
 } from "@shared/schema";
 import { eq, and, desc, like, notLike, sql, gte, or, isNull } from "drizzle-orm";
-import { generateCoverUrl } from "./cos";
+import { generateCoverUrl, generateAudioUrl } from "./cos";
 
 // Listening limits
 const GUEST_LISTEN_LIMIT = 1;
@@ -114,7 +114,7 @@ export class DatabaseStorage implements IStorage {
       author: book.author || 'Unknown Author',
       description: 'Deskripsi buku akan segera tersedia.',
       coverUrl: generateCoverUrl(book.id),
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      audioUrl: generateAudioUrl(book.id),
       cosFilename: null,
       duration: 180, // 3 minutes default
       category: book.category || 'Uncategorized',
@@ -143,7 +143,7 @@ export class DatabaseStorage implements IStorage {
       author: rawBook.author || 'Unknown Author',
       description: 'Deskripsi buku akan segera tersedia.',
       coverUrl: generateCoverUrl(rawBook.id),
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      audioUrl: generateAudioUrl(rawBook.id),
       cosFilename: null,
       duration: 180,
       category: rawBook.category || 'Uncategorized',
@@ -186,7 +186,7 @@ export class DatabaseStorage implements IStorage {
       author: row.bookAuthor || 'Unknown Author',
       description: 'Deskripsi buku akan segera tersedia.',
       coverUrl: generateCoverUrl(row.bookId),
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      audioUrl: generateAudioUrl(row.bookId),
       cosFilename: null,
       duration: 180,
       category: row.bookCategory || 'Uncategorized',
@@ -263,7 +263,7 @@ export class DatabaseStorage implements IStorage {
       author: row.bookAuthor || 'Unknown Author',
       description: 'Deskripsi buku akan segera tersedia.',
       coverUrl: generateCoverUrl(row.bookId),
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      audioUrl: generateAudioUrl(row.bookId),
       cosFilename: null,
       duration: 180,
       category: row.bookCategory || 'Uncategorized',

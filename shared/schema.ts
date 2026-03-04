@@ -26,6 +26,7 @@ export const books = pgTable("books_list", {
   description: text("description"),
   coverUrl: text("cover_url"),
   audioUrl: text("audio_url"),
+  pdfUrl: text("pdf_url"), // URL to PDF file in COS
   cosFilename: text("cos_filename"),
   duration: integer("duration"), // in seconds
   category: text("category"),

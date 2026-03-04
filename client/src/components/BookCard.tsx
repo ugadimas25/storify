@@ -1,5 +1,5 @@
 import { Book } from "@shared/schema";
-import { Play, Pause, Clock } from "lucide-react";
+import { Play, Pause, Clock, BookOpen } from "lucide-react";
 import { Link } from "wouter";
 import { useAudio } from "@/context/AudioContext";
 import { cn } from "@/lib/utils";
@@ -70,6 +70,13 @@ export function BookCard({ book, variant = "vertical", className, showDuration =
               (e.target as HTMLImageElement).src = '/placeholder-book.svg';
             }}
           />
+          
+          {/* PDF Available Badge - All books have PDF */}
+          <div className="absolute top-2 left-2 md:top-3 md:left-3 flex items-center gap-1 bg-primary/90 backdrop-blur-sm text-primary-foreground text-[9px] md:text-[10px] px-2 py-1 rounded-full font-medium shadow-lg">
+            <BookOpen className="w-3 h-3" />
+            PDF
+          </div>
+          
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           
@@ -115,6 +122,13 @@ export function BookCard({ book, variant = "vertical", className, showDuration =
             (e.target as HTMLImageElement).src = '/placeholder-book.svg';
           }}
         />
+        
+        {/* PDF Available Badge - All books have PDF */}
+        <div className="absolute top-2 left-2 md:top-3 md:left-3 flex items-center gap-1 bg-primary/90 backdrop-blur-sm text-primary-foreground text-[9px] md:text-[10px] px-2 py-1 rounded-full font-medium shadow-lg z-10">
+          <BookOpen className="w-3 h-3" />
+          PDF
+        </div>
+        
         {/* Always visible subtle gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-70" />
         
