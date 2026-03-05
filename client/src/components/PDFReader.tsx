@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Maximize2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+// Setup PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PDFReaderProps {
   pdfUrl: string;
@@ -11,44 +16,38 @@ interface PDFReaderProps {
 }
 
 export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [scale, setScale] = useState<number>(1.0);
   const [loading, setLoading] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  // Start with Google Viewer for faster initial load (streaming)
-  const [useNativeViewer, setUseNativeViewer] = useState(false);
-  const [loadTimeout, setLoadTimeout] = useState(false);
 
-  const directPdfUrl = `${pdfUrl}#view=FitH&scrollbar=1`;
-  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-  
-  // Auto-switch to native if Google Viewer takes too long (15 seconds)
-  useEffect(() => {
-    if (!useNativeViewer && loading) {
-      const timer = setTimeout(() => {
-        setLoadTimeout(true);
-      }, 15000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [useNativeViewer, loading]);
-  
+  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages);
+    setLoading(false);
+  }
+
+  function onDocumentLoadError(error: Error) {
+    console.error('Error loading PDF:', error);
+    setLoading(false);
+  }
+
+  const changePage = (offset: number) => {
+    setPageNumber(prevPageNumber => Math.min(Math.max(prevPageNumber + offset, 1), numPages));
+  };
+
+  const previousPage = () => changePage(-1);
+  const nextPage = () => changePage(1);
+
+  const zoomIn = () => setScale(prev => Math.min(prev + 0.2, 3));
+  const zoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.5));
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
   };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
@@ -67,20 +66,47 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
           )}
           <div>
             <h2 className="font-semibold text-sm md:text-base line-clamp-1">{bookTitle}</h2>
-            <p className="text-xs text-muted-foreground">PDF Reader</p>
+            <p className="text-xs text-muted-foreground">
+              {numPages > 0 ? `Halaman ${pageNumber} dari ${numPages}` : 'Memuat...'}
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Zoom Controls */}
+          <div className="hidden md:flex items-center gap-1 bg-secondary/50 rounded-lg p-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={zoomOut}
+              disabled={scale <= 0.5}
+            >
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
+              {Math.round(scale * 100)}%
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={zoomIn}
+              disabled={scale >= 3}
+            >
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.open(pdfUrl, '_blank')}
-            className="text-xs"
+            className="text-xs hidden md:flex"
           >
             Buka di Tab Baru
           </Button>
-          
+
           <Button
             variant="ghost"
             size="icon"
@@ -93,110 +119,88 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       </div>
 
       {/* PDF Viewer Container */}
-      <div className="flex-1 relative bg-muted/20 overflow-hidden">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-20">
-            <div className="text-center space-y-4 max-w-md mx-auto p-6">
-              <Skeleton className="w-[200px] h-[280px] mx-auto rounded-lg" />
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Memuat PDF...</p>
-                <p className="text-xs text-muted-foreground">
-                  {useNativeViewer 
-                    ? 'Mengunduh file PDF untuk tampilan optimal' 
-                    : 'Memuat preview dari Google Docs'}
-                </p>
-                {loadTimeout && !useNativeViewer && (
-                  <div className="pt-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => {
-                        setUseNativeViewer(true);
-                        setLoading(true);
-                        setLoadTimeout(false);
-                      }}
-                    >
-                      Coba Native Viewer
-                    </Button>
-                  </div>
-                )}
+      <div className="flex-1 relative overflow-auto bg-muted/20" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex flex-col items-center py-4 min-h-full">
+          {loading && (
+            <div className="flex items-center justify-center h-96">
+              <div className="text-center space-y-4">
+                <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">Memuat PDF...</p>
               </div>
             </div>
-          </div>
-        )}
-        
-        {/* Use iframe with Google Docs Viewer by default for faster streaming */}
-        {!useNativeViewer ? (
-          <iframe
-            src={googleViewerUrl}
-            className={cn(
-              "w-full h-full border-0",
-              loading && "opacity-0"
-            )}
-            onLoad={() => setLoading(false)}
-            onError={() => {
-              console.log('Google Viewer failed, switching to native');
-              setUseNativeViewer(true);
-              setLoading(true);
-            }}
-            title={bookTitle}
-            allow="fullscreen"
-          />
-        ) : (
-          <object
-            data={directPdfUrl}
-            type="application/pdf"
-            className={cn(
-              "w-full h-full",
-              loading && "opacity-0"
-            )}
-            onLoad={() => setLoading(false)}
-            onError={() => setLoading(false)}
-            title={bookTitle}
-          >
-            <div className="flex items-center justify-center h-full p-8">
-              <div className="text-center space-y-4 max-w-md">
-                <p className="text-muted-foreground">
-                  Browser Anda tidak mendukung PDF viewer bawaan.
-                </p>
-                <div className="flex gap-2 justify-center flex-wrap">
-                  <Button onClick={() => window.open(pdfUrl, '_blank')}>
-                    Buka PDF di Tab Baru
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => {
-                      setUseNativeViewer(false);
-                      setLoading(true);
-                    }}
-                  >
-                    Coba Google Viewer
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </object>
-        )}
+          )}
 
-        {/* Switch viewer option - shown after loaded */}
-        {!loading && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-            <div className="bg-background/95 backdrop-blur-sm rounded-lg shadow-lg p-2 border">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setUseNativeViewer(!useNativeViewer);
-                  setLoading(true);
-                  setLoadTimeout(false);
-                }}
-                className="text-xs"
-              >
-                {useNativeViewer ? '📄 Google Viewer (Lebih Cepat)' : '🔍 Native Viewer (Scroll Lebih Baik)'}
-              </Button>
-            </div>
+          <Document
+            file={pdfUrl}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading=""
+            className="max-w-full"
+          >
+            <Page
+              pageNumber={pageNumber}
+              scale={scale}
+              loading={
+                <div className="flex items-center justify-center h-96">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              }
+              className="shadow-2xl mx-auto"
+              renderTextLayer={true}
+              renderAnnotationLayer={true}
+            />
+          </Document>
+        </div>
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="border-t bg-background/95 backdrop-blur-sm px-4 py-3">
+        <div className="flex items-center justify-between max-w-4xl mx-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={previousPage}
+            disabled={pageNumber <= 1}
+            className="rounded-full"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">Sebelumnya</span>
+          </Button>
+
+          {/* Page Input for Desktop */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground hidden sm:inline">
+              Halaman
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={numPages}
+              value={pageNumber}
+              onChange={(e) => {
+                const page = parseInt(e.target.value);
+                if (page >= 1 && page <= numPages) {
+                  setPageNumber(page);
+                }
+              }}
+              className="w-16 px-2 py-1 text-center text-sm border rounded-md bg-background"
+            />
+            <span className="text-sm text-muted-foreground">
+              / {numPages}
+            </span>
           </div>
-        )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={nextPage}
+            disabled={pageNumber >= numPages}
+            className="rounded-full"
+          >
+            <span className="hidden sm:inline">Selanjutnya</span>
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
       </div>
     </div>
   );
