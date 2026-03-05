@@ -26,30 +26,46 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   // Auto-adjust scale for mobile
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
+    console.log('[PDFReader] Initial setup, isMobile:', isMobile, 'window.innerWidth:', window.innerWidth);
     if (isMobile) {
       setScale(1.2);
     }
   }, []);
 
+  // Track page and scale changes
+  useEffect(() => {
+    console.log('[PDFReader] State changed:', { pageNumber, scale, renderingPage, numPages });
+  }, [pageNumber, scale, renderingPage, numPages]);
+
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    console.log('[PDFReader] Document loaded successfully, numPages:', numPages);
     setNumPages(numPages);
     setLoading(false);
     setError(null);
   }
 
   function onDocumentLoadError(error: Error) {
-    console.error('Error loading PDF:', error);
+    console.error('[PDFReader] Error loading PDF:', error);
     setError(error.message);
     setLoading(false);
   }
 
   function onPageRenderSuccess() {
+    console.log('[PDFReader] Page rendered successfully, page:', pageNumber, 'scale:', scale);
     setRenderingPage(false);
   }
 
   const changePage = (offset: number) => {
     const newPage = Math.min(Math.max(pageNumber + offset, 1), numPages);
+    console.log('[PDFReader] changePage called:', { 
+      offset, 
+      currentPage: pageNumber, 
+      newPage, 
+      renderingPage,
+      willChange: newPage !== pageNumber 
+    });
     if (newPage !== pageNumber) {
+      console.log('[PDFReader] Setting renderingPage=true, changing to page:', newPage);
       setRenderingPage(true);
       setPageNumber(newPage);
     }
@@ -59,13 +75,17 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const nextPage = () => changePage(1);
 
   const zoomIn = () => {
+    const newScale = Math.min(scale + 0.2, 3);
+    console.log('[PDFReader] Zoom in:', { currentScale: scale, newScale, renderingPage });
     setRenderingPage(true);
-    setScale(prev => Math.min(prev + 0.2, 3));
+    setScale(newScale);
   };
   
   const zoomOut = () => {
+    const newScale = Math.max(scale - 0.2, 0.5);
+    console.log('[PDFReader] Zoom out:', { currentScale: scale, newScale, renderingPage });
     setRenderingPage(true);
-    setScale(prev => Math.max(prev - 0.2, 0.5));
+    setScale(newScale);
   };
 
   const toggleFullscreen = () => {
@@ -242,7 +262,10 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
                   <div className="absolute inset-0 flex items-center justify-center bg-muted/20 backdrop-blur-[2px] z-10 rounded-lg">
                     <div className="flex flex-col items-center gap-2 bg-background/90 px-4 py-3 rounded-lg shadow-lg">
                       <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">Memuat halaman {pageNumber}...</span>
+                      <span className="text-sm text-muted-foreground">
+                        Memuat halaman {pageNumber}... 
+                        <span className="text-xs block mt-1">(Check console untuk debug info)</span>
+                      </span>
                     </div>
                   </div>
                 )}
@@ -254,7 +277,10 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   onRenderSuccess={onPageRenderSuccess}
-                  onRenderError={() => setRenderingPage(false)}
+                  onRenderError={(error) => {
+                    console.error('[PDFReader] Page render error:', error);
+                    setRenderingPage(false);
+                  }}
                   loading={
                     <div className="flex items-center justify-center h-96 w-full">
                       <div className="flex flex-col items-center gap-2">
