@@ -237,28 +237,34 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               error={null}
               className="max-w-full"
             >
-              <div className="relative min-h-[500px]">
+              <div className="relative min-h-[500px] flex items-center justify-center">
                 {renderingPage && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm z-10 rounded-lg">
-                    <div className="flex flex-col items-center gap-2">
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted/20 backdrop-blur-[2px] z-10 rounded-lg">
+                    <div className="flex flex-col items-center gap-2 bg-background/90 px-4 py-3 rounded-lg shadow-lg">
                       <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">Memuat halaman...</span>
+                      <span className="text-sm text-muted-foreground">Memuat halaman {pageNumber}...</span>
                     </div>
                   </div>
                 )}
                 <Page
+                  key={`page-${pageNumber}-${scale}`}
                   pageNumber={pageNumber}
                   scale={scale}
                   width={window.innerWidth < 768 ? window.innerWidth - 32 : undefined}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   onRenderSuccess={onPageRenderSuccess}
+                  onRenderError={() => setRenderingPage(false)}
                   loading={
-                    <div className="flex items-center justify-center h-96">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <div className="flex items-center justify-center h-96 w-full">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <span className="text-sm text-muted-foreground">Memuat PDF...</span>
+                      </div>
                     </div>
                   }
-                  className="shadow-lg"
+                  className="shadow-lg transition-opacity duration-200"
+                  style={{ opacity: renderingPage ? 0.3 : 1 }}
                 />
               </div>
             </Document>
