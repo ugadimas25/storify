@@ -4,6 +4,13 @@ import { useAuth } from '../hooks/use-auth';
 import { getVisitorId } from '../hooks/use-subscription';
 import { apiUrl } from '../lib/api-config';
 
+interface AudioChapter {
+  chapterNumber: number;
+  title: string;
+  url: string;
+  size: number;
+}
+
 interface AudioContextType {
   currentBook: Book | null;
   isPlaying: boolean;
@@ -11,11 +18,14 @@ interface AudioContextType {
   currentTime: number; // in seconds
   duration: number; // in seconds
   listeningError: string | null;
+  chapters: AudioChapter[];
+  currentChapterIndex: number;
   playBook: (book: Book, startTime?: number) => Promise<boolean>;
   togglePlay: () => void;
   seek: (value: number) => void;
   skipForward: (seconds?: number) => void;
   skipBackward: (seconds?: number) => void;
+  skipToChapter: (index: number) => void;
   closePlayer: () => void;
   clearListeningError: () => void;
 }
@@ -39,6 +49,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [listeningError, setListeningError] = useState<string | null>(null);
+  const [chapters, setChapters] = useState<AudioChapter[]>([]);
+  const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveProgressRef = useRef<((bookId: number, progress: number, currentTime: number) => void) | null>(null);
 
@@ -88,8 +100,13 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     };
     
     const handleEnded = () => {
-      setIsPlaying(false);
-      setProgress(100);
+      // Auto-play next chapter if available
+      if (chapters.length > 0 && currentChapterIndex < chapters.length - 1) {
+        setCurrentChapterIndex(prev => prev + 1);
+      } else {
+        setIsPlaying(false);
+        setProgress(100);
+      }
     };
 
     audio.addEventListener('timeupdate', updateProgress);
@@ -102,7 +119,20 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener('ended', handleEnded);
       audio.pause();
     };
-  }, []);
+  }, [chapters.length, currentChapterIndex]);
+
+  // Load audio when chapter changes
+  useEffect(() => {
+    if (chapters.length > 0 && audioRef.current && currentBook) {
+      const chapter = chapters[currentChapterIndex];
+      audioRef.current.src = chapter.url;
+      audioRef.current.load();
+      
+      if (isPlaying) {
+        audioRef.current.play().catch(console.error);
+      }
+    }
+  }, [currentChapterIndex, chapters]);
 
   // Save progress when time updates (using ref to get latest function)
   useEffect(() => {
@@ -161,6 +191,32 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     // Clear any previous error
     setListeningError(null);
 
+    // Fetch audio chapters
+    try {
+      const chaptersRes = await fetch(apiUrl(`/api/books/${book.id}/audio-chapters`));
+      if (chaptersRes.ok) {
+        const fetchedChapters = await chaptersRes.json();
+        if (fetchedChapters.length > 0) {
+          setChapters(fetchedChapters);
+          setCurrentChapterIndex(0);
+          setCurrentBook(book);
+
+          if (audioRef.current) {
+            audioRef.current.src = fetchedChapters[0].url;
+            audioRef.current.load();
+            audioRef.current.play().then(() => setIsPlaying(true)).catch(console.error);
+          }
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch chapters:', error);
+    }
+
+    // Fallback to single audio file if no chapters
+    setChapters([]);
+    setCurrentChapterIndex(0);
+    
     if (audioRef.current) {
       setCurrentBook(book);
       // Using a sample MP3 for MVP demonstration purposes if audioUrl is a placeholder
@@ -235,6 +291,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const skipToChapter = (index: number) => {
+    if (index >= 0 && index < chapters.length) {
+      setCurrentChapterIndex(index);
+      setCurrentTime(0);
+      setProgress(0);
+    }
+  };
+
   const closePlayer = () => {
     // Save progress before closing
     if (currentBook && user && progress > 0) {
@@ -255,6 +319,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     setProgress(0);
     setCurrentTime(0);
     setDuration(0);
+    setChapters([]);
+    setCurrentChapterIndex(0);
   };
 
   return (
@@ -265,11 +331,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       currentTime, 
       duration,
       listeningError,
+      chapters,
+      currentChapterIndex,
       playBook, 
       togglePlay, 
       seek, 
       skipForward,
       skipBackward,
+      skipToChapter,
       closePlayer,
       clearListeningError,
     }}>

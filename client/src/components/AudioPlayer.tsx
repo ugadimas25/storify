@@ -1,5 +1,5 @@
 import { useAudio } from "@/context/AudioContext";
-import { Play, Pause, X, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, X, SkipBack, SkipForward, ChevronLeft, ChevronRight } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,27 @@ function formatTime(seconds: number): string {
 }
 
 export function GlobalAudioPlayer() {
-  const { currentBook, isPlaying, progress, currentTime, duration, togglePlay, seek, skipForward, skipBackward, closePlayer } = useAudio();
+  const { 
+    currentBook, 
+    isPlaying, 
+    progress, 
+    currentTime, 
+    duration, 
+    chapters,
+    currentChapterIndex,
+    togglePlay, 
+    seek, 
+    skipForward, 
+    skipBackward,
+    skipToChapter,
+    closePlayer 
+  } = useAudio();
 
   // If no book is playing, don't render anything
   if (!currentBook) return null;
+
+  const hasChapters = chapters.length > 0;
+  const currentChapter = hasChapters ? chapters[currentChapterIndex] : null;
 
   return (
     <AnimatePresence>
@@ -49,23 +66,44 @@ export function GlobalAudioPlayer() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-bold truncate leading-tight">{currentBook.title}</h4>
-                <p className="text-xs text-muted-foreground truncate">
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </p>
+                {hasChapters && currentChapter ? (
+                  <p className="text-xs text-muted-foreground truncate">
+                    Bab {currentChapter.chapterNumber + 1}/{chapters.length}: {currentChapter.title}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </p>
+                )}
               </div>
 
               {/* Controls */}
               <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
-                  onClick={() => skipBackward(15)}
-                  title="Rewind 15 seconds"
-                >
-                  <SkipBack className="w-4 h-4" />
-                  <span className="absolute -bottom-0.5 text-[8px] font-bold">15</span>
-                </Button>
+                {hasChapters && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => skipToChapter(currentChapterIndex - 1)}
+                    disabled={currentChapterIndex === 0}
+                    title="Previous chapter"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                )}
+
+                {!hasChapters && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
+                    onClick={() => skipBackward(15)}
+                    title="Rewind 15 seconds"
+                  >
+                    <SkipBack className="w-4 h-4" />
+                    <span className="absolute -bottom-0.5 text-[8px] font-bold">15</span>
+                  </Button>
+                )}
 
                 <Button 
                   onClick={(e) => {
@@ -82,16 +120,31 @@ export function GlobalAudioPlayer() {
                   )}
                 </Button>
 
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
-                  onClick={() => skipForward(15)}
-                  title="Forward 15 seconds"
-                >
-                  <SkipForward className="w-4 h-4" />
-                  <span className="absolute -bottom-0.5 text-[8px] font-bold">15</span>
-                </Button>
+                {hasChapters && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => skipToChapter(currentChapterIndex + 1)}
+                    disabled={currentChapterIndex === chapters.length - 1}
+                    title="Next chapter"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                )}
+
+                {!hasChapters && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
+                    onClick={() => skipForward(15)}
+                    title="Forward 15 seconds"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                    <span className="absolute -bottom-0.5 text-[8px] font-bold">15</span>
+                  </Button>
+                )}
 
                 <Button 
                   variant="ghost" 
