@@ -13,10 +13,23 @@ interface PDFReaderProps {
 export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [useNativeViewer, setUseNativeViewer] = useState(true);
+  // Start with Google Viewer for faster initial load (streaming)
+  const [useNativeViewer, setUseNativeViewer] = useState(false);
+  const [loadTimeout, setLoadTimeout] = useState(false);
 
   const directPdfUrl = `${pdfUrl}#view=FitH&scrollbar=1`;
   const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+  
+  // Auto-switch to native if Google Viewer takes too long (15 seconds)
+  useEffect(() => {
+    if (!useNativeViewer && loading) {
+      const timer = setTimeout(() => {
+        setLoadTimeout(true);
+      }, 15000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [useNativeViewer, loading]);
   
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -63,7 +76,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
             variant="outline"
             size="sm"
             onClick={() => window.open(pdfUrl, '_blank')}
-            className="hidden md:flex"
+            className="text-xs"
           >
             Buka di Tab Baru
           </Button>
@@ -82,24 +95,63 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       {/* PDF Viewer Container */}
       <div className="flex-1 relative bg-muted/20 overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <Skeleton className="w-[300px] h-[400px] mx-auto rounded-lg" />
-              <p className="text-sm text-muted-foreground">Memuat PDF...</p>
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-20">
+            <div className="text-center space-y-4 max-w-md mx-auto p-6">
+              <Skeleton className="w-[200px] h-[280px] mx-auto rounded-lg" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Memuat PDF...</p>
+                <p className="text-xs text-muted-foreground">
+                  {useNativeViewer 
+                    ? 'Mengunduh file PDF untuk tampilan optimal' 
+                    : 'Memuat preview dari Google Docs'}
+                </p>
+                {loadTimeout && !useNativeViewer && (
+                  <div className="pt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setUseNativeViewer(true);
+                        setLoading(true);
+                        setLoadTimeout(false);
+                      }}
+                    >
+                      Coba Native Viewer
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
         
-        {/* Use object tag for native PDF rendering - better scroll support */}
-        {useNativeViewer ? (
+        {/* Use iframe with Google Docs Viewer by default for faster streaming */}
+        {!useNativeViewer ? (
+          <iframe
+            src={googleViewerUrl}
+            className={cn(
+              "w-full h-full border-0",
+              loading && "opacity-0"
+            )}
+            onLoad={() => setLoading(false)}
+            onError={() => {
+              console.log('Google Viewer failed, switching to native');
+              setUseNativeViewer(true);
+              setLoading(true);
+            }}
+            title={bookTitle}
+            allow="fullscreen"
+          />
+        ) : (
           <object
             data={directPdfUrl}
             type="application/pdf"
             className={cn(
               "w-full h-full",
-              loading && "hidden"
+              loading && "opacity-0"
             )}
             onLoad={() => setLoading(false)}
+            onError={() => setLoading(false)}
             title={bookTitle}
           >
             <div className="flex items-center justify-center h-full p-8">
@@ -107,7 +159,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
                 <p className="text-muted-foreground">
                   Browser Anda tidak mendukung PDF viewer bawaan.
                 </p>
-                <div className="space-x-2">
+                <div className="flex gap-2 justify-center flex-wrap">
                   <Button onClick={() => window.open(pdfUrl, '_blank')}>
                     Buka PDF di Tab Baru
                   </Button>
@@ -124,33 +176,25 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               </div>
             </div>
           </object>
-        ) : (
-          <iframe
-            src={googleViewerUrl}
-            className={cn(
-              "w-full h-full border-0",
-              loading && "hidden"
-            )}
-            onLoad={() => setLoading(false)}
-            title={bookTitle}
-            allow="fullscreen"
-          />
         )}
 
-        {/* Switch viewer option */}
+        {/* Switch viewer option - shown after loaded */}
         {!loading && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setUseNativeViewer(!useNativeViewer);
-                setLoading(true);
-              }}
-              className="shadow-lg"
-            >
-              {useNativeViewer ? 'Gunakan Google Viewer' : 'Gunakan Native Viewer'}
-            </Button>
+            <div className="bg-background/95 backdrop-blur-sm rounded-lg shadow-lg p-2 border">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setUseNativeViewer(!useNativeViewer);
+                  setLoading(true);
+                  setLoadTimeout(false);
+                }}
+                className="text-xs"
+              >
+                {useNativeViewer ? '📄 Google Viewer (Lebih Cepat)' : '🔍 Native Viewer (Scroll Lebih Baik)'}
+              </Button>
+            </div>
           </div>
         )}
       </div>
