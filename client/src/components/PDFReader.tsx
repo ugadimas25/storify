@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, X, Loader2, AlertCircle } from "lucide-react";
@@ -22,6 +22,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const [renderingPage, setRenderingPage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useFallback, setUseFallback] = useState(false);
+  const renderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-adjust scale for mobile
   useEffect(() => {
@@ -35,6 +36,21 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   // Track page and scale changes
   useEffect(() => {
     console.log('[PDFReader] State changed:', { pageNumber, scale, renderingPage, numPages });
+    
+    // Safety timeout: clear renderingPage after 5s if onRenderSuccess never fires
+    if (renderingPage) {
+      const timeout = setTimeout(() => {
+        console.warn('[PDFReader] Render timeout - forcing renderingPage=false');
+        setRenderingPage(false);
+      }, 5000);
+      renderTimeoutRef.current = timeout;
+      
+      return () => {
+        if (renderTimeoutRef.current) {
+          clearTimeout(renderTimeoutRef.current);
+        }
+      };
+    }
   }, [pageNumber, scale, renderingPage, numPages]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
@@ -52,6 +68,10 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
 
   function onPageRenderSuccess() {
     console.log('[PDFReader] Page rendered successfully, page:', pageNumber, 'scale:', scale);
+    if (renderTimeoutRef.current) {
+      clearTimeout(renderTimeoutRef.current);
+      renderTimeoutRef.current = null;
+    }
     setRenderingPage(false);
   }
 
@@ -64,6 +84,13 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       renderingPage,
       willChange: newPage !== pageNumber 
     });
+    
+    // Prevent page change while already rendering to avoid PDF.js worker crash
+    if (renderingPage) {
+      console.warn('[PDFReader] Ignoring page change - already rendering');
+      return;
+    }
+    
     if (newPage !== pageNumber) {
       console.log('[PDFReader] Setting renderingPage=true, changing to page:', newPage);
       setRenderingPage(true);
@@ -75,6 +102,10 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const nextPage = () => changePage(1);
 
   const zoomIn = () => {
+    if (renderingPage) {
+      console.warn('[PDFReader] Ignoring zoom - already rendering');
+      return;
+    }
     const newScale = Math.min(scale + 0.2, 3);
     console.log('[PDFReader] Zoom in:', { currentScale: scale, newScale, renderingPage });
     setRenderingPage(true);
@@ -82,6 +113,10 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   };
   
   const zoomOut = () => {
+    if (renderingPage) {
+      console.warn('[PDFReader] Ignoring zoom - already rendering');
+      return;
+    }
     const newScale = Math.max(scale - 0.2, 0.5);
     console.log('[PDFReader] Zoom out:', { currentScale: scale, newScale, renderingPage });
     setRenderingPage(true);
@@ -270,7 +305,6 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
                   </div>
                 )}
                 <Page
-                  key={`page-${pageNumber}-${scale}`}
                   pageNumber={pageNumber}
                   scale={scale}
                   width={window.innerWidth < 768 ? window.innerWidth - 32 : undefined}
@@ -324,8 +358,14 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
                 max={numPages}
                 value={pageNumber}
                 onChange={(e) => {
+                  if (renderingPage) {
+                    console.warn('[PDFReader] Ignoring page input - already rendering');
+                    return;
+                  }
                   const page = parseInt(e.target.value);
-                  if (page >= 1 && page <= numPages) {
+                  if (page >= 1 && page <= numPages && page !== pageNumber) {
+                    console.log('[PDFReader] Page input changed to:', page);
+                    setRenderingPage(true);
                     setPageNumber(page);
                   }
                 }}
