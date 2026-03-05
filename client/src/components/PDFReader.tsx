@@ -106,53 +106,58 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       </div>
 
       {/* PDF Viewer Container */}
-      <div className="flex-1 overflow-auto bg-muted/20 p-4 md:p-8">
-        <div className="max-w-5xl mx-auto">
-          {loading && (
-            <div className="space-y-4">
-              <Skeleton className="w-full aspect-[8.5/11] rounded-lg" />
-            </div>
-          )}
-          
-          {/* Using iframe for PDF display with Google Docs Viewer by default */}
-          <iframe
-            src={viewerUrl}
-            className={cn(
-              "w-full rounded-lg shadow-2xl bg-white transition-all duration-300",
-              loading && "hidden"
+      <div className="flex-1 relative bg-muted/20">
+        <div className="absolute inset-0 overflow-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="max-w-5xl mx-auto p-4 md:p-8">
+            {loading && (
+              <div className="space-y-4">
+                <Skeleton className="w-full aspect-[8.5/11] rounded-lg" />
+              </div>
             )}
-            style={{ 
-              height: "calc(100vh - 200px)",
-              transform: useDirectPDF ? `scale(${scale})` : 'scale(1)',
-              transformOrigin: "top center",
-            }}
-            onLoad={() => setLoading(false)}
-            onError={() => {
-              console.log('PDF load error');
-              setLoading(false);
-            }}
-            title={bookTitle}
-            allow="fullscreen"
-          />
+            
+            {/* Using iframe for PDF display with Google Docs Viewer by default */}
+            <iframe
+              src={viewerUrl}
+              className={cn(
+                "w-full rounded-lg shadow-2xl bg-white transition-all duration-300",
+                loading && "hidden"
+              )}
+              style={{ 
+                height: "calc(100vh - 140px)",
+                minHeight: "600px",
+                transform: useDirectPDF ? `scale(${scale})` : 'scale(1)',
+                transformOrigin: "top center",
+                touchAction: "pan-y pinch-zoom",
+              }}
+              onLoad={() => setLoading(false)}
+              onError={() => {
+                console.log('PDF load error');
+                setLoading(false);
+              }}
+              title={bookTitle}
+              allow="fullscreen"
+              scrolling="yes"
+            />
 
-          {/* Option to switch between viewers */}
-          {!loading && (
-            <div className="text-center mt-4">
-              <p className="text-xs text-muted-foreground mb-2">
-                {useDirectPDF ? 'Menggunakan Direct PDF' : 'Menggunakan Google Docs Viewer'}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setUseDirectPDF(!useDirectPDF);
-                  setLoading(true);
-                }}
-              >
-                {useDirectPDF ? 'Gunakan Google Viewer' : 'Coba Direct PDF'}
-              </Button>
-            </div>
-          )}
+            {/* Option to switch between viewers */}
+            {!loading && (
+              <div className="text-center mt-4 pb-4">
+                <p className="text-xs text-muted-foreground mb-2">
+                  {useDirectPDF ? 'Menggunakan Direct PDF' : 'Menggunakan Google Docs Viewer'}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setUseDirectPDF(!useDirectPDF);
+                    setLoading(true);
+                  }}
+                >
+                  {useDirectPDF ? 'Gunakan Google Viewer' : 'Coba Direct PDF'}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -408,6 +408,7 @@ export class DatabaseStorage implements IStorage {
         userId: userId || null,
         visitorId: userId ? null : visitorId, // Only set visitorId if no userId
         bookId,
+        playedAt: new Date(),
       });
     }
   }
