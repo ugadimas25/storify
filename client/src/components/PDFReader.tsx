@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ interface PDFReaderProps {
   onClose?: () => void;
 }
 
-export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
+const PDFReaderComponent = ({ pdfUrl, bookTitle, onClose }: PDFReaderProps) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.5);
@@ -35,21 +35,21 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
     }
   }, []);
 
-  function onDocumentLoadSuccess(pdf: PDFDocumentProxy) {
+  const onDocumentLoadSuccess = useCallback((pdf: PDFDocumentProxy) => {
     console.log('[PDFReader] Document loaded successfully, numPages:', pdf.numPages);
     documentRef.current = pdf;
     setNumPages(pdf.numPages);
     setLoading(false);
     setError(null);
-  }
+  }, []);
 
-  function onDocumentLoadError(error: Error) {
+  const onDocumentLoadError = useCallback((error: Error) => {
     console.error('[PDFReader] Error loading PDF:', error);
     setError(error.message);
     setLoading(false);
-  }
+  }, []);
 
-  const changePage = (offset: number) => {
+  const changePage = useCallback((offset: number) => {
     const newPage = Math.min(Math.max(pageNumber + offset, 1), numPages);
     console.log('[PDFReader] changePage:', pageNumber, '→', newPage, 'isRendering:', isPageRendering);
     
@@ -63,33 +63,33 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
         setIsPageRendering(true);
       }
     }
-  };
+  }, [pageNumber, numPages, isPageRendering]);
 
-  const previousPage = () => changePage(-1);
-  const nextPage = () => changePage(1);
+  const previousPage = useCallback(() => changePage(-1), [changePage]);
+  const nextPage = useCallback(() => changePage(1), [changePage]);
 
-  const zoomIn = () => {
+  const zoomIn = useCallback(() => {
     const newScale = Math.min(scale + 0.2, 3);
     console.log('[PDFReader] Zoom in:', scale, '→', newScale);
     setScale(newScale);
-  };
+  }, [scale]);
   
-  const zoomOut = () => {
+  const zoomOut = useCallback(() => {
     const newScale = Math.max(scale - 0.2, 0.5);
     console.log('[PDFReader] Zoom out:', scale, '→', newScale);
     setScale(newScale);
-  };
+  }, [scale]);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
     } else {
       document.exitFullscreen();
     }
-  };
+  }, []);
 
   // Handle page render completion
-  const onPageRenderSuccess = () => {
+  const onPageRenderSuccess = useCallback(() => {
     console.log('[PDFReader] Page rendered successfully');
     setIsPageRendering(false);
     
@@ -101,13 +101,13 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       setPageNumber(queuedPage);
       setIsPageRendering(true);
     }
-  };
+  }, []);
 
-  const onPageRenderError = (error: Error) => {
+  const onPageRenderError = useCallback((error: Error) => {
     console.error('[PDFReader] Page render error:', error);
     setIsPageRendering(false);
     pageChangeQueueRef.current = null;
-  };
+  }, []);
 
   // Fallback to Google Docs Viewer if react-pdf fails
   if (useFallback) {
@@ -339,4 +339,6 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       )}
     </div>
   );
-}
+};
+
+export const PDFReader = memo(PDFReaderComponent);
