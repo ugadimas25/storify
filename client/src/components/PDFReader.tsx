@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, X } from "lucide-react";
+import { Maximize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PDFReaderProps {
@@ -11,21 +11,12 @@ interface PDFReaderProps {
 }
 
 export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
-  const [scale, setScale] = useState(1.0);
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // Start with Google Viewer by default for better compatibility
-  const [useGoogleViewer, setUseGoogleViewer] = useState(true);
-  const [useDirectPDF, setUseDirectPDF] = useState(false);
+  const [useNativeViewer, setUseNativeViewer] = useState(true);
 
-  console.log('PDFReader mounted:', { pdfUrl, bookTitle, useDirectPDF });
-
-  // Use Google Docs Viewer by default, with option to try direct PDF
-  const viewerUrl = useDirectPDF
-    ? `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`
-    : `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-  
-  console.log('Viewer URL:', viewerUrl);
+  const directPdfUrl = `${pdfUrl}#view=FitH&scrollbar=1`;
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
   
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -68,32 +59,15 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Zoom Controls - Hidden on mobile, disabled when using Google Viewer */}
-          {useDirectPDF && (
-            <div className="hidden md:flex items-center gap-1 bg-secondary/50 rounded-lg p-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setScale(Math.max(0.5, scale - 0.1))}
-              >
-                <ZoomOut className="w-4 h-4" />
-              </Button>
-              <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
-                {Math.round(scale * 100)}%
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setScale(Math.min(2, scale + 0.1))}
-              >
-                <ZoomIn className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
-          {/* Action Buttons */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(pdfUrl, '_blank')}
+            className="hidden md:flex"
+          >
+            Buka di Tab Baru
+          </Button>
+          
           <Button
             variant="ghost"
             size="icon"
@@ -106,88 +80,79 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       </div>
 
       {/* PDF Viewer Container */}
-      <div className="flex-1 relative bg-muted/20">
-        <div className="absolute inset-0 overflow-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="max-w-5xl mx-auto p-4 md:p-8">
-            {loading && (
-              <div className="space-y-4">
-                <Skeleton className="w-full aspect-[8.5/11] rounded-lg" />
-              </div>
-            )}
-            
-            {/* Using iframe for PDF display with Google Docs Viewer by default */}
-            <iframe
-              src={viewerUrl}
-              className={cn(
-                "w-full rounded-lg shadow-2xl bg-white transition-all duration-300",
-                loading && "hidden"
-              )}
-              style={{ 
-                height: "calc(100vh - 140px)",
-                minHeight: "600px",
-                transform: useDirectPDF ? `scale(${scale})` : 'scale(1)',
-                transformOrigin: "top center",
-                touchAction: "pan-y pinch-zoom",
-              }}
-              onLoad={() => setLoading(false)}
-              onError={() => {
-                console.log('PDF load error');
-                setLoading(false);
-              }}
-              title={bookTitle}
-              allow="fullscreen"
-              scrolling="yes"
-            />
-
-            {/* Option to switch between viewers */}
-            {!loading && (
-              <div className="text-center mt-4 pb-4">
-                <p className="text-xs text-muted-foreground mb-2">
-                  {useDirectPDF ? 'Menggunakan Direct PDF' : 'Menggunakan Google Docs Viewer'}
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setUseDirectPDF(!useDirectPDF);
-                    setLoading(true);
-                  }}
-                >
-                  {useDirectPDF ? 'Gunakan Google Viewer' : 'Coba Direct PDF'}
-                </Button>
-              </div>
-            )}
+      <div className="flex-1 relative bg-muted/20 overflow-hidden">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <Skeleton className="w-[300px] h-[400px] mx-auto rounded-lg" />
+              <p className="text-sm text-muted-foreground">Memuat PDF...</p>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Bottom Navigation - Mobile Only */}
-      <div className="md:hidden border-t bg-background/95 backdrop-blur-sm px-4 py-3">
-        <div className="flex items-center justify-between max-w-md mx-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="rounded-full"
+        )}
+        
+        {/* Use object tag for native PDF rendering - better scroll support */}
+        {useNativeViewer ? (
+          <object
+            data={directPdfUrl}
+            type="application/pdf"
+            className={cn(
+              "w-full h-full",
+              loading && "hidden"
+            )}
+            onLoad={() => setLoading(false)}
+            title={bookTitle}
           >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Prev
-          </Button>
+            <div className="flex items-center justify-center h-full p-8">
+              <div className="text-center space-y-4 max-w-md">
+                <p className="text-muted-foreground">
+                  Browser Anda tidak mendukung PDF viewer bawaan.
+                </p>
+                <div className="space-x-2">
+                  <Button onClick={() => window.open(pdfUrl, '_blank')}>
+                    Buka PDF di Tab Baru
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setUseNativeViewer(false);
+                      setLoading(true);
+                    }}
+                  >
+                    Coba Google Viewer
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </object>
+        ) : (
+          <iframe
+            src={googleViewerUrl}
+            className={cn(
+              "w-full h-full border-0",
+              loading && "hidden"
+            )}
+            onLoad={() => setLoading(false)}
+            title={bookTitle}
+            allow="fullscreen"
+          />
+        )}
 
-          <span className="text-sm text-muted-foreground">
-            Scroll untuk membaca
-          </span>
-
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="rounded-full"
-          >
-            Next
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        </div>
+        {/* Switch viewer option */}
+        {!loading && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setUseNativeViewer(!useNativeViewer);
+                setLoading(true);
+              }}
+              className="shadow-lg"
+            >
+              {useNativeViewer ? 'Gunakan Google Viewer' : 'Gunakan Native Viewer'}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
