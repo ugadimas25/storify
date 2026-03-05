@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, X, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, X, Loader2, AlertCircle } from "lucide-react";
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
@@ -20,14 +19,18 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [useFallback, setUseFallback] = useState(false);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
     setLoading(false);
+    setError(null);
   }
 
   function onDocumentLoadError(error: Error) {
     console.error('Error loading PDF:', error);
+    setError(error.message);
     setLoading(false);
   }
 
@@ -48,6 +51,27 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       document.exitFullscreen();
     }
   };
+
+  // Fallback to Google Docs Viewer if react-pdf fails
+  if (useFallback) {
+    return (
+      <div className="fixed inset-0 bg-background z-50 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          {onClose && (
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="w-5 h-5" />
+            </Button>
+          )}
+          <h2 className="font-semibold flex-1 ml-2">{bookTitle}</h2>
+        </div>
+        <iframe
+          src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
+          className="w-full h-full border-0"
+          title={bookTitle}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
@@ -121,7 +145,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
       {/* PDF Viewer Container */}
       <div className="flex-1 relative overflow-auto bg-muted/20" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex flex-col items-center py-4 min-h-full">
-          {loading && (
+          {loading && !error && (
             <div className="flex items-center justify-center h-96">
               <div className="text-center space-y-4">
                 <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
@@ -130,78 +154,105 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
             </div>
           )}
 
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading=""
-            className="max-w-full"
-          >
-            <Page
-              pageNumber={pageNumber}
-              scale={scale}
-              loading={
-                <div className="flex items-center justify-center h-96">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          {error && (
+            <div className="flex items-center justify-center h-96 px-4">
+              <div className="text-center space-y-4 max-w-md">
+                <AlertCircle className="w-12 h-12 mx-auto text-destructive" />
+                <div className="space-y-2">
+                  <p className="font-semibold">Gagal Memuat PDF</p>
+                  <p className="text-sm text-muted-foreground">{error}</p>
                 </div>
-              }
-              className="shadow-2xl mx-auto"
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-            />
-          </Document>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  <Button onClick={() => window.open(pdfUrl, '_blank')}>
+                    Buka di Tab Baru
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setUseFallback(true);
+                      setError(null);
+                      setLoading(true);
+                    }}
+                  >
+                    Coba Viewer Alternatif
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!error && (
+            <Document
+              file={pdfUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={null}
+              error={null}
+              className="max-w-full"
+            >
+              <Page
+                pageNumber={pageNumber}
+                scale={scale}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                className="shadow-lg"
+              />
+            </Document>
+          )}
         </div>
       </div>
 
       {/* Bottom Navigation */}
-      <div className="border-t bg-background/95 backdrop-blur-sm px-4 py-3">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={previousPage}
-            disabled={pageNumber <= 1}
-            className="rounded-full"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">Sebelumnya</span>
-          </Button>
+      {!error && numPages > 0 && (
+        <div className="border-t bg-background/95 backdrop-blur-sm px-4 py-3">
+          <div className="flex items-center justify-between max-w-4xl mx-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={previousPage}
+              disabled={pageNumber <= 1}
+              className="rounded-full"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Sebelumnya</span>
+            </Button>
 
-          {/* Page Input for Desktop */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground hidden sm:inline">
-              Halaman
-            </span>
-            <input
-              type="number"
-              min={1}
-              max={numPages}
-              value={pageNumber}
-              onChange={(e) => {
-                const page = parseInt(e.target.value);
-                if (page >= 1 && page <= numPages) {
-                  setPageNumber(page);
-                }
-              }}
-              className="w-16 px-2 py-1 text-center text-sm border rounded-md bg-background"
-            />
-            <span className="text-sm text-muted-foreground">
-              / {numPages}
-            </span>
+            {/* Page Input for Desktop */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground hidden sm:inline">
+                Halaman
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={numPages}
+                value={pageNumber}
+                onChange={(e) => {
+                  const page = parseInt(e.target.value);
+                  if (page >= 1 && page <= numPages) {
+                    setPageNumber(page);
+                  }
+                }}
+                className="w-16 px-2 py-1 text-center text-sm border rounded-md bg-background"
+              />
+              <span className="text-sm text-muted-foreground">
+                / {numPages}
+              </span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={nextPage}
+              disabled={pageNumber >= numPages}
+              className="rounded-full"
+            >
+              <span className="hidden sm:inline">Selanjutnya</span>
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={nextPage}
-            disabled={pageNumber >= numPages}
-            className="rounded-full"
-          >
-            <span className="hidden sm:inline">Selanjutnya</span>
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
