@@ -263,6 +263,72 @@ export function generateAudioUrl(bookId: number): string {
 }
 
 /**
+ * List audio chapters for a book from COS bucket
+ * Audio files are stored in folders: audio/{bookId}/{number}_{title}.mp3
+ * Example: audio/3/0_Pendahuluan.mp3, audio/3/1_Bab 1 (No Once Crazy).mp3
+ */
+export async function listAudioChapters(bookId: number): Promise<AudioChapter[]> {
+  const cos = createCOSClient();
+  const { region, bucket } = getCOSConfig();
+  const prefix = `audio/${bookId}/`;
+
+  try {
+    const data = await new Promise<COS.GetBucketResult>((resolve, reject) => {
+      cos.getBucket({
+        Bucket: bucket,
+        Region: region,
+        Prefix: prefix,
+      }, (err, data) => {
+        if (err) reject(err);
+        else resolve(data);
+      });
+    });
+
+    if (!data.Contents || data.Contents.length === 0) {
+      return [];
+    }
+
+    // Parse filenames and create chapter objects
+    const chapters: AudioChapter[] = data.Contents
+      .filter(item => item.Key && item.Key.endsWith('.mp3'))
+      .map(item => {
+        const filename = item.Key!.split('/').pop() || '';
+        // Parse format: {number}_{title}.mp3
+        const match = filename.match(/^(\d+)_(.+)\.mp3$/);
+        
+        if (!match) {
+          return null;
+        }
+
+        const [, numberStr, title] = match;
+        const chapterNumber = parseInt(numberStr, 10);
+        const url = getCOSUrl(item.Key!);
+        
+        return {
+          chapterNumber,
+          title: decodeURIComponent(title.replace(/_/g, ' ')),
+          url,
+          size: item.Size || 0,
+        };
+      })
+      .filter((chapter): chapter is AudioChapter => chapter !== null)
+      .sort((a, b) => a.chapterNumber - b.chapterNumber);
+
+    return chapters;
+  } catch (error) {
+    console.error(`Error listing audio chapters for book ${bookId}:`, error);
+    return [];
+  }
+}
+
+export interface AudioChapter {
+  chapterNumber: number;
+  title: string;
+  url: string;
+  size: number;
+}
+
+/**
  * Generate PDF URL for a book from COS bucket
  * PDF files are stored in the 'pdf' folder, named by book ID
  */

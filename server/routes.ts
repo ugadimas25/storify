@@ -10,6 +10,7 @@ import { hashPassword, verifyPassword, generateSessionId } from "./auth";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { sendVerificationEmail } from "./email";
+import { listAudioChapters } from "./cos";
 
 // Extend express-session types
 declare module "express-session" {
@@ -177,6 +178,23 @@ export async function registerRoutes(
         });
       }
       throw error;
+    }
+  });
+
+  // Audio Chapters Route
+  app.get(api.audioChapters.list.path, async (req, res) => {
+    const bookId = Number(req.params.bookId);
+    
+    if (isNaN(bookId)) {
+      return res.status(404).json({ message: "Book not found" });
+    }
+
+    try {
+      const chapters = await listAudioChapters(bookId);
+      res.json(chapters);
+    } catch (error) {
+      console.error(`Error fetching audio chapters for book ${bookId}:`, error);
+      res.status(500).json({ message: "Failed to fetch audio chapters" });
     }
   });
 

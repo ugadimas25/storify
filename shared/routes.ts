@@ -124,9 +124,34 @@ export const api = {
       },
     },
   },
+  audioChapters: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/books/:bookId/audio-chapters',
+      responses: {
+        200: z.array(z.object({
+          chapterNumber: z.number(),
+          title: z.string(),
+          url: z.string(),
+          size: z.number(),
+        })),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
+  let url = path;
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (url.includes(`:${key}`)) {
+        url = url.replace(`:${key}`, String(value));
+      }
+    });
+  }
+  return url;
+}
   let url = path;
   if (params) {
     Object.entries(params).forEach(([key, value]) => {

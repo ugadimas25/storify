@@ -5,16 +5,18 @@ import { useFavorites, useToggleFavorite, useIsFavorite } from "@/hooks/use-favo
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Play, Pause, Heart, Share2, Clock, BookOpen, Headphones } from "lucide-react";
+import { ArrowLeft, Play, Pause, Heart, Share2, Clock, BookOpen, Headphones, List } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { PDFReader } from "@/components/PDFReader";
+import { ChapterAudioPlayer } from "@/components/ChapterAudioPlayer";
 import { useState } from "react";
 
 export default function BookDetail() {
   const [, params] = useRoute("/book/:id");
   const id = parseInt(params?.id || "0");
   const [showPDFReader, setShowPDFReader] = useState(false);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
   
   const { data: book, isLoading } = useBook(id);
   const { currentBook, isPlaying, playBook, togglePlay } = useAudio();
@@ -135,6 +137,16 @@ export default function BookDetail() {
             >
               <BookOpen className="w-5 h-5 mr-2" /> Read Full Book
             </Button>
+
+            {/* Listen by Chapters */}
+            <Button 
+              size="lg" 
+              variant="outline"
+              className="w-full rounded-xl h-14 text-base font-semibold border-2 hover:bg-primary/5 transition-all"
+              onClick={() => setShowAudioPlayer(true)}
+            >
+              <List className="w-5 h-5 mr-2" /> Listen by Chapters
+            </Button>
           </div>
         </div>
 
@@ -169,6 +181,15 @@ export default function BookDetail() {
           pdfUrl={pdfUrl} 
           bookTitle={book.title} 
           onClose={() => setShowPDFReader(false)}
+        />
+      )}
+
+      {/* Audio Player Modal */}
+      {showAudioPlayer && (
+        <ChapterAudioPlayer 
+          bookId={book.id}
+          bookTitle={book.title} 
+          onClose={() => setShowAudioPlayer(false)}
         />
       )}
     </div>
