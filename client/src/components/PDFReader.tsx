@@ -209,6 +209,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
 
           {!error && (
             <Document
+              key={pdfUrl}
               file={{
                 url: pdfUrl,
                 httpHeaders: {
