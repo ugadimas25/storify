@@ -19,6 +19,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.5);
   const [loading, setLoading] = useState(true);
+  const [renderingPage, setRenderingPage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useFallback, setUseFallback] = useState(false);
 
@@ -42,15 +43,30 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
     setLoading(false);
   }
 
+  function onPageRenderSuccess() {
+    setRenderingPage(false);
+  }
+
   const changePage = (offset: number) => {
-    setPageNumber(prevPageNumber => Math.min(Math.max(prevPageNumber + offset, 1), numPages));
+    const newPage = Math.min(Math.max(pageNumber + offset, 1), numPages);
+    if (newPage !== pageNumber) {
+      setRenderingPage(true);
+      setPageNumber(newPage);
+    }
   };
 
   const previousPage = () => changePage(-1);
   const nextPage = () => changePage(1);
 
-  const zoomIn = () => setScale(prev => Math.min(prev + 0.2, 3));
-  const zoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.5));
+  const zoomIn = () => {
+    setRenderingPage(true);
+    setScale(prev => Math.min(prev + 0.2, 3));
+  };
+  
+  const zoomOut = () => {
+    setRenderingPage(true);
+    setScale(prev => Math.max(prev - 0.2, 0.5));
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -99,7 +115,16 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
           <div>
             <h2 className="font-semibold text-sm md:text-base line-clamp-1">{bookTitle}</h2>
             <p className="text-xs text-muted-foreground">
-              {numPages > 0 ? `Halaman ${pageNumber} dari ${numPages}` : 'Memuat...'}
+              {renderingPage ? (
+                <span className="flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Memuat...
+                </span>
+              ) : numPages > 0 ? (
+                `Halaman ${pageNumber} dari ${numPages}`
+              ) : (
+                'Memuat...'
+              )}
             </p>
           </div>
         </div>
@@ -212,14 +237,30 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               error={null}
               className="max-w-full"
             >
-              <Page
-                pageNumber={pageNumber}
-                scale={scale}
-                width={window.innerWidth < 768 ? window.innerWidth - 32 : undefined}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-                className="shadow-lg"
-              />
+              <div className="relative min-h-[500px]">
+                {renderingPage && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm z-10 rounded-lg">
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Memuat halaman...</span>
+                    </div>
+                  </div>
+                )}
+                <Page
+                  pageNumber={pageNumber}
+                  scale={scale}
+                  width={window.innerWidth < 768 ? window.innerWidth - 32 : undefined}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  onRenderSuccess={onPageRenderSuccess}
+                  loading={
+                    <div className="flex items-center justify-center h-96">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  }
+                  className="shadow-lg"
+                />
+              </div>
             </Document>
           )}
         </div>
