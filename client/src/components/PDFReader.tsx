@@ -19,6 +19,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useFallback, setUseFallback] = useState(false);
 
@@ -42,15 +43,35 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
     setLoading(false);
   }
 
+  function onPageLoadSuccess() {
+    setPageLoading(false);
+  }
+
+  function onPageLoadError(error: Error) {
+    console.error('Error loading page:', error);
+    setPageLoading(false);
+  }
+
   const changePage = (offset: number) => {
-    setPageNumber(prevPageNumber => Math.min(Math.max(prevPageNumber + offset, 1), numPages));
+    const newPage = Math.min(Math.max(pageNumber + offset, 1), numPages);
+    if (newPage !== pageNumber) {
+      setPageLoading(true);
+      setPageNumber(newPage);
+    }
   };
 
   const previousPage = () => changePage(-1);
   const nextPage = () => changePage(1);
 
-  const zoomIn = () => setScale(prev => Math.min(prev + 0.2, 3));
-  const zoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.5));
+  const zoomIn = () => {
+    setPageLoading(true);
+    setScale(prev => Math.min(prev + 0.2, 3));
+  };
+  
+  const zoomOut = () => {
+    setPageLoading(true);
+    setScale(prev => Math.max(prev - 0.2, 0.5));
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -99,7 +120,16 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
           <div>
             <h2 className="font-semibold text-sm md:text-base line-clamp-1">{bookTitle}</h2>
             <p className="text-xs text-muted-foreground">
-              {numPages > 0 ? `Halaman ${pageNumber} dari ${numPages}` : 'Memuat...'}
+              {pageLoading ? (
+                <span className="flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Memuat halaman...
+                </span>
+              ) : numPages > 0 ? (
+                `Halaman ${pageNumber} dari ${numPages}`
+              ) : (
+                'Memuat...'
+              )}
             </p>
           </div>
         </div>
@@ -112,7 +142,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               size="icon"
               className="h-8 w-8"
               onClick={zoomOut}
-              disabled={scale <= 0.5}
+              disabled={scale <= 0.5 || pageLoading}
             >
               <ZoomOut className="w-4 h-4" />
             </Button>
@@ -124,7 +154,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               size="icon"
               className="h-8 w-8"
               onClick={zoomIn}
-              disabled={scale >= 3}
+              disabled={scale >= 3 || pageLoading}
             >
               <ZoomIn className="w-4 h-4" />
             </Button>
@@ -212,14 +242,28 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               error={null}
               className="max-w-full"
             >
-              <Page
-                pageNumber={pageNumber}
-                scale={scale}
-                width={Math.min(window.innerWidth - 32, 800)}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-                className="shadow-lg"
-              />
+              <div className="relative">
+                {pageLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                )}
+                <Page
+                  pageNumber={pageNumber}
+                  scale={scale}
+                  width={Math.min(window.innerWidth - 32, 800)}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                  onLoadSuccess={onPageLoadSuccess}
+                  onLoadError={onPageLoadError}
+                  loading={
+                    <div className="flex items-center justify-center h-96">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  }
+                  className="shadow-lg"
+                />
+              </div>
             </Document>
           )}
         </div>
@@ -233,7 +277,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               variant="outline"
               size="sm"
               onClick={previousPage}
-              disabled={pageNumber <= 1}
+              disabled={pageNumber <= 1 || pageLoading}
               className="rounded-full"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
@@ -250,13 +294,15 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
                 min={1}
                 max={numPages}
                 value={pageNumber}
+                disabled={pageLoading}
                 onChange={(e) => {
                   const page = parseInt(e.target.value);
-                  if (page >= 1 && page <= numPages) {
+                  if (page >= 1 && page <= numPages && page !== pageNumber) {
+                    setPageLoading(true);
                     setPageNumber(page);
                   }
                 }}
-                className="w-16 px-2 py-1 text-center text-sm border rounded-md bg-background"
+                className="w-16 px-2 py-1 text-center text-sm border rounded-md bg-background disabled:opacity-50"
               />
               <span className="text-sm text-muted-foreground">
                 / {numPages}
@@ -267,7 +313,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               variant="outline"
               size="sm"
               onClick={nextPage}
-              disabled={pageNumber >= numPages}
+              disabled={pageNumber >= numPages || pageLoading}
               className="rounded-full"
             >
               <span className="hidden sm:inline">Selanjutnya</span>
