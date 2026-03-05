@@ -17,7 +17,7 @@ interface PDFReaderProps {
 export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
+  const [scale, setScale] = useState<number>(1.5);
   const [loading, setLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      setScale(0.8);
+      setScale(1.2);
     }
   }, []);
 
@@ -251,7 +251,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
                 <Page
                   pageNumber={pageNumber}
                   scale={scale}
-                  width={Math.min(window.innerWidth - 32, 800)}
+                  width={window.innerWidth < 768 ? window.innerWidth - 32 : undefined}
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
                   onLoadSuccess={onPageLoadSuccess}
