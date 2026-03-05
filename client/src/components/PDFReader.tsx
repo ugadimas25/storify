@@ -22,7 +22,9 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useFallback, setUseFallback] = useState(false);
+  const [isPageRendering, setIsPageRendering] = useState(false);
   const documentRef = useRef<PDFDocumentProxy | null>(null);
+  const pageChangeQueueRef = useRef<number | null>(null);
 
   // Auto-adjust scale for mobile
   useEffect(() => {
@@ -49,9 +51,17 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
 
   const changePage = (offset: number) => {
     const newPage = Math.min(Math.max(pageNumber + offset, 1), numPages);
-    console.log('[PDFReader] changePage:', pageNumber, '→', newPage);
+    console.log('[PDFReader] changePage:', pageNumber, '→', newPage, 'isRendering:', isPageRendering);
+    
     if (newPage !== pageNumber) {
-      setPageNumber(newPage);
+      // If currently rendering, queue the page change
+      if (isPageRendering) {
+        console.log('[PDFReader] Page is rendering, queuing page change to:', newPage);
+        pageChangeQueueRef.current = newPage;
+      } else {
+        setPageNumber(newPage);
+        setIsPageRendering(true);
+      }
     }
   };
 
@@ -76,6 +86,27 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
     } else {
       document.exitFullscreen();
     }
+  };
+
+  // Handle page render completion
+  const onPageRenderSuccess = () => {
+    console.log('[PDFReader] Page rendered successfully');
+    setIsPageRendering(false);
+    
+    // If there's a queued page change, apply it now
+    if (pageChangeQueueRef.current !== null) {
+      const queuedPage = pageChangeQueueRef.current;
+      console.log('[PDFReader] Applying queued page change to:', queuedPage);
+      pageChangeQueueRef.current = null;
+      setPageNumber(queuedPage);
+      setIsPageRendering(true);
+    }
+  };
+
+  const onPageRenderError = (error: Error) => {
+    console.error('[PDFReader] Page render error:', error);
+    setIsPageRendering(false);
+    pageChangeQueueRef.current = null;
   };
 
   // Fallback to Google Docs Viewer if react-pdf fails
@@ -237,6 +268,8 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
                 width={window.innerWidth < 768 ? window.innerWidth - 32 : undefined}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
+                onRenderSuccess={onPageRenderSuccess}
+                onRenderError={onPageRenderError}
                 loading={
                   <div className="flex items-center justify-center h-96 w-full">
                     <div className="flex flex-col items-center gap-2">
