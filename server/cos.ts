@@ -261,3 +261,15 @@ export function generateAudioUrl(bookId: number): string {
   // If there are different formats, create an audio-extensions.ts mapping similar to cover-extensions.ts
   return `https://${bucket}.cos.${region}.myqcloud.com/audio/${bookId}.mp3`;
 }
+
+/**
+ * Generate PDF URL for a book from COS bucket
+ * PDF files are stored in the 'pdf' folder, named by book ID
+ */
+export function generatePdfUrl(bookId: number): string {
+  const bucket = 'pewacaold-1379748683';
+  const region = 'ap-jakarta';
+  
+  // All PDF files are in pdf format
+  return `https://${bucket}.cos.${region}.myqcloud.com/pdf/${bookId}.pdf`;
+}

@@ -6,7 +6,7 @@ import {
   type SubscriptionPlan, type Subscription, type ListeningHistory, type PaymentTransaction
 } from "@shared/schema";
 import { eq, and, desc, like, notLike, sql, gte, or, isNull } from "drizzle-orm";
-import { generateCoverUrl, generateAudioUrl } from "./cos";
+import { generateCoverUrl, generateAudioUrl, generatePdfUrl } from "./cos";
 
 // Listening limits
 const GUEST_LISTEN_LIMIT = 1;
@@ -83,6 +83,10 @@ export class DatabaseStorage implements IStorage {
         titleFix: books.titleFix,
         author: books.author,
         category: books.category,
+        description: books.description,
+        pdfUrl: books.pdfUrl,
+        duration: books.duration,
+        isFeatured: books.isFeatured,
       })
       .from(books);
 
@@ -112,13 +116,14 @@ export class DatabaseStorage implements IStorage {
       id: book.id,
       title: book.titleFix || book.title || 'Untitled',
       author: book.author || 'Unknown Author',
-      description: 'Deskripsi buku akan segera tersedia.',
+      description: book.description || 'Deskripsi buku akan segera tersedia.',
       coverUrl: generateCoverUrl(book.id),
       audioUrl: generateAudioUrl(book.id),
+      pdfUrl: book.pdfUrl || generatePdfUrl(book.id),
       cosFilename: null,
-      duration: 180, // 3 minutes default
+      duration: book.duration || 180,
       category: book.category || 'Uncategorized',
-      isFeatured: false,
+      isFeatured: book.isFeatured || false,
     }));
   }
 
@@ -130,6 +135,10 @@ export class DatabaseStorage implements IStorage {
         titleFix: books.titleFix,
         author: books.author,
         category: books.category,
+        description: books.description,
+        pdfUrl: books.pdfUrl,
+        duration: books.duration,
+        isFeatured: books.isFeatured,
       })
       .from(books)
       .where(eq(books.id, id));
@@ -141,13 +150,14 @@ export class DatabaseStorage implements IStorage {
       id: rawBook.id,
       title: rawBook.titleFix || rawBook.title || 'Untitled',
       author: rawBook.author || 'Unknown Author',
-      description: 'Deskripsi buku akan segera tersedia.',
+      description: rawBook.description || 'Deskripsi buku akan segera tersedia.',
       coverUrl: generateCoverUrl(rawBook.id),
       audioUrl: generateAudioUrl(rawBook.id),
+      pdfUrl: rawBook.pdfUrl || generatePdfUrl(rawBook.id),
       cosFilename: null,
-      duration: 180,
+      duration: rawBook.duration || 180,
       category: rawBook.category || 'Uncategorized',
-      isFeatured: false,
+      isFeatured: rawBook.isFeatured || false,
     };
   }
 
@@ -174,6 +184,10 @@ export class DatabaseStorage implements IStorage {
         bookTitleFix: books.titleFix,
         bookAuthor: books.author,
         bookCategory: books.category,
+        bookDescription: books.description,
+        bookPdfUrl: books.pdfUrl,
+        bookDuration: books.duration,
+        bookIsFeatured: books.isFeatured,
       })
       .from(favorites)
       .innerJoin(books, eq(favorites.bookId, books.id))
@@ -184,13 +198,14 @@ export class DatabaseStorage implements IStorage {
       id: row.bookId,
       title: row.bookTitleFix || row.bookTitle || 'Untitled',
       author: row.bookAuthor || 'Unknown Author',
-      description: 'Deskripsi buku akan segera tersedia.',
+      description: row.bookDescription || 'Deskripsi buku akan segera tersedia.',
       coverUrl: generateCoverUrl(row.bookId),
       audioUrl: generateAudioUrl(row.bookId),
+      pdfUrl: row.bookPdfUrl || generatePdfUrl(row.bookId),
       cosFilename: null,
-      duration: 180,
+      duration: row.bookDuration || 180,
       category: row.bookCategory || 'Uncategorized',
-      isFeatured: false,
+      isFeatured: row.bookIsFeatured || false,
     }));
   }
 
@@ -247,6 +262,10 @@ export class DatabaseStorage implements IStorage {
         bookTitleFix: books.titleFix,
         bookAuthor: books.author,
         bookCategory: books.category,
+        bookDescription: books.description,
+        bookPdfUrl: books.pdfUrl,
+        bookDuration: books.duration,
+        bookIsFeatured: books.isFeatured,
         progress: playbackProgress.progress,
         currentTime: playbackProgress.currentTime,
       })
@@ -261,13 +280,14 @@ export class DatabaseStorage implements IStorage {
       id: row.bookId,
       title: row.bookTitleFix || row.bookTitle || 'Untitled',
       author: row.bookAuthor || 'Unknown Author',
-      description: 'Deskripsi buku akan segera tersedia.',
+      description: row.bookDescription || 'Deskripsi buku akan segera tersedia.',
       coverUrl: generateCoverUrl(row.bookId),
       audioUrl: generateAudioUrl(row.bookId),
+      pdfUrl: row.bookPdfUrl || generatePdfUrl(row.bookId),
       cosFilename: null,
-      duration: 180,
+      duration: row.bookDuration || 180,
       category: row.bookCategory || 'Uncategorized',
-      isFeatured: false,
+      isFeatured: row.bookIsFeatured || false,
       progress: row.progress,
       currentTime: row.currentTime,
     }));
