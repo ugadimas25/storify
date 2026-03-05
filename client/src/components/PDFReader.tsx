@@ -21,15 +21,12 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useFallback, setUseFallback] = useState(false);
-  const [useNativeViewer, setUseNativeViewer] = useState(false);
 
-  // Detect mobile or slow connection - use native browser PDF viewer
+  // Auto-adjust scale for mobile
   useEffect(() => {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isSlowConnection = navigator.connection && (navigator.connection as any).effectiveType === '2g';
-    
-    if (isMobile || isSlowConnection) {
-      setUseNativeViewer(true);
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setScale(0.8);
     }
   }, []);
 
@@ -80,47 +77,6 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
           className="w-full h-full border-0"
           title={bookTitle}
         />
-      </div>
-    );
-  }
-
-  // Native browser PDF viewer for mobile (faster, supports streaming)
-  if (useNativeViewer) {
-    return (
-      <div className="fixed inset-0 bg-background z-50 flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95">
-          <div className="flex items-center gap-3">
-            {onClose && (
-              <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-                <X className="w-5 h-5" />
-              </Button>
-            )}
-            <h2 className="font-semibold text-sm md:text-base line-clamp-1">{bookTitle}</h2>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.open(pdfUrl, '_blank')}
-            className="text-xs"
-          >
-            Tab Baru
-          </Button>
-        </div>
-        <object
-          data={pdfUrl}
-          type="application/pdf"
-          className="w-full h-full"
-          aria-label={bookTitle}
-        >
-          <div className="flex items-center justify-center h-full p-4">
-            <div className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">Browser tidak mendukung PDF viewer</p>
-              <Button onClick={() => window.open(pdfUrl, '_blank')}>
-                Buka PDF di Tab Baru
-              </Button>
-            </div>
-          </div>
-        </object>
       </div>
     );
   }
@@ -259,6 +215,7 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
               <Page
                 pageNumber={pageNumber}
                 scale={scale}
+                width={Math.min(window.innerWidth - 32, 800)}
                 renderTextLayer={true}
                 renderAnnotationLayer={true}
                 className="shadow-lg"
