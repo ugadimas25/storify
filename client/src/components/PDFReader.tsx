@@ -183,7 +183,18 @@ export function PDFReader({ pdfUrl, bookTitle, onClose }: PDFReaderProps) {
 
           {!error && (
             <Document
-              file={pdfUrl}
+              file={{
+                url: pdfUrl,
+                httpHeaders: {
+                  'Accept': 'application/pdf',
+                },
+                withCredentials: false,
+              }}
+              options={{
+                cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+                cMapPacked: true,
+                standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+              }}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading={null}
