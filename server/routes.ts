@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { api } from "@shared/routes";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth/index";
+import { setupGoogleAuth } from "./auth/google";
 import { z } from "zod";
 import { users, sessions, activityLogs } from "@db/schema";
 import { hashPassword, verifyPassword, generateSessionId } from "./auth";
@@ -140,6 +141,7 @@ export async function registerRoutes(
   // Auth Setup
   await setupAuth(app);
   registerAuthRoutes(app);
+  setupGoogleAuth(app); // Google OAuth
 
   // Books Routes
   app.get(api.books.list.path, async (req, res) => {

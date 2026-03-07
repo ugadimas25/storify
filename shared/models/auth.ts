@@ -24,6 +24,8 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false).notNull(),
   verificationToken: varchar("verification_token"),
   verificationExpires: timestamp("verification_expires"),
+  // Google OAuth fields
+  googleId: varchar("google_id").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

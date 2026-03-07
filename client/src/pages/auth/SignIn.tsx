@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { GoogleLogin } from "@react-oauth/google";
 import { apiUrl } from "@/lib/api-config";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -87,6 +88,61 @@ export default function SignIn() {
     }
   };
 
+  // Google Login Handler
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(apiUrl("/api/auth/google"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          credential: credentialResponse.credential,
+        }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Google login failed");
+      }
+
+      const data = await response.json();
+
+      // Invalidate auth cache so UI updates
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+
+      toast({
+        title: "Berhasil!",
+        description: `Selamat datang${data.user.name ? ", " + data.user.name : ""}!`,
+      });
+
+      setTimeout(() => {
+        setLocation("/");
+      }, 500);
+    } catch (error: any) {
+      console.error("Google login error:", error);
+      toast({
+        title: "Login Gagal",
+        description: error.message || "Gagal masuk dengan Google",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error("Google login failed");
+    toast({
+      title: "Login Gagal",
+      description: "Gagal masuk dengan Google. Silakan coba lagi.",
+      variant: "destructive",
+    });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#a1dab4]/20 via-white to-[#41b6c4]/10 px-4">
       <Card className="w-full max-w-md">
@@ -137,6 +193,39 @@ export default function SignIn() {
               {isLoading ? "Memproses..." : "Masuk"}
             </Button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">
+                Atau masuk dengan
+              </span>
+            </div>
+          </div>
+
+          {/* Google Login Button */}
+          <div className="flex justify-center">
+            {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                useOneTap={false}
+                theme="outline"
+                size="large"
+                text="signin_with"
+                shape="rectangular"
+                width="100%"
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground text-center">
+                Google Login belum dikonfigurasi
+              </p>
+            )}
+          </div>
+
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Belum punya akun?{" "}
             <Link href="/auth/signup" className="text-primary hover:underline font-medium">
