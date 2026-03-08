@@ -55,4 +55,4 @@ fi
 
 echo ""
 echo "🎉 Deployment complete!"
-echo "🌐 Visit: https://storify.asia"
+echo "🌐 Visit: https://app.storify.asia"

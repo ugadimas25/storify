@@ -4,15 +4,60 @@ Panduan lengkap untuk upload aplikasi Android Storify ke Google Play Console dan
 
 ---
 
+## � File untuk Upload ke Play Store
+
+> **File yang diupload ke Play Store adalah AAB (Android App Bundle), bukan APK.**
+
+| File | Lokasi | Ukuran | Keterangan |
+|------|--------|--------|------------|
+| **AAB (Play Store)** | `release/storify-v1.1.aab` | ~3.2 MB | **Gunakan ini untuk upload ke Play Store** |
+| APK (testing lokal) | `android/app/build/outputs/apk/debug/app-debug.apk` | ~3.2 MB | Hanya untuk test di emulator/device |
+
+---
+
+## 🔨 Cara Build AAB Terbaru (Sebelum Upload)
+
+Setiap kali ada perubahan kode, build ulang sebelum upload:
+
+```bash
+# 1. Build web assets
+npm run build
+
+# 2. Sync ke Android
+npx cap sync android
+
+# 3. Build AAB release (di folder root project)
+cd android && ./gradlew bundleRelease && cd ..
+
+# 4. File AAB ada di:
+# android/app/build/outputs/bundle/release/app-release.aab
+
+# 5. Copy ke folder release dengan versi baru
+copy android\app\build\outputs\bundle\release\app-release.aab release\storify-v1.1.aab
+```
+
+**Keystore sudah dikonfigurasi** di `android/app/build.gradle`:
+- Keystore: `android/storify-release.keystore`
+- Alias: `storify`
+- Signing otomatis dilakukan saat `bundleRelease`
+
+**Setiap update ke Play Store, increment version di** `android/app/build.gradle`:
+```gradle
+versionCode 2        // naik 1 setiap release
+versionName "1.1"   // semantic version
+```
+
+---
+
 ## 📋 Prerequisites
 
 ### File yang Diperlukan
 
-- ✅ **AAB File (Android App Bundle):** `release/storify-v1.0.aab` (2.97 MB)
-- ✅ **APK File (untuk testing):** `release/storify-v1.0.apk` (3.16 MB)
+- ✅ **AAB File (Android App Bundle):** `release/storify-v1.1.aab` (3.2 MB)  
+  *(dibangun ulang March 9, 2026 - fix Capacitor bundling)*
 - ✅ **App Icon (512x512):** `assets/icon-512.png`
 - ⚠️ **Screenshots:** Belum ada (akan dibuat di langkah ini)
-- ⚠️ **Privacy Policy:** Perlu dibuat/URL
+- ⚠️ **Privacy Policy:** Sudah ada di `privacy-policy.html`, perlu dihosting
 
 ### Akun yang Diperlukan
 
@@ -240,7 +285,7 @@ Free users dapat mendengarkan hingga 5 menit per hari. Daftar sekarang dan mulai
 
 📞 BUTUH BANTUAN?
 Email: support@storify.asia
-Website: https://storify.asia
+Website: https://app.storify.asia
 
 Download sekarang dan ubah cara kamu belajar! 🚀
 ```
@@ -306,7 +351,7 @@ Jika punya video demo app, upload YouTube link di sini.
 
 **Phone:** (opsional) nomor telepon customer support
 
-**Website:** `https://storify.asia`
+**Website:** `https://app.storify.asia`
 
 #### G. Privacy Policy
 
@@ -323,68 +368,17 @@ Jika punya video demo app, upload YouTube link di sini.
    - User rights (akses, hapus data)
    - Contact info
 
-**Contoh Privacy Policy URL:**
+**Privacy Policy URL:**
 ```
-https://storify.asia/privacy-policy
-```
-
-Buat file HTML sederhana dan host di production server:
-
-```html
-<!-- /var/www/storify/dist/public/privacy-policy.html -->
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Privacy Policy - Storify</title>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
-    h1 { color: #1a1a2e; }
-    h2 { color: #333; margin-top: 30px; }
-  </style>
-</head>
-<body>
-  <h1>Privacy Policy for Storify</h1>
-  <p>Last updated: February 8, 2026</p>
-  
-  <h2>1. Information We Collect</h2>
-  <p>We collect the following information:</p>
-  <ul>
-    <li>Email address and name (for account creation)</li>
-    <li>Listening history and favorites (for app functionality)</li>
-    <li>Payment information (processed securely by DOKU)</li>
-  </ul>
-  
-  <h2>2. How We Use Your Information</h2>
-  <p>We use your information to:</p>
-  <ul>
-    <li>Provide and improve our services</li>
-    <li>Process subscription payments</li>
-    <li>Send important updates and notifications</li>
-  </ul>
-  
-  <h2>3. Data Sharing</h2>
-  <p>We share data with:</p>
-  <ul>
-    <li>DOKU - Payment processing</li>
-    <li>Tencent Cloud - Audio file storage and delivery</li>
-  </ul>
-  
-  <h2>4. Your Rights</h2>
-  <p>You have the right to:</p>
-  <ul>
-    <li>Access your personal data</li>
-    <li>Request data deletion</li>
-    <li>Opt-out of marketing communications</li>
-  </ul>
-  
-  <h2>5. Contact Us</h2>
-  <p>For privacy inquiries: support@storify.asia</p>
-</body>
-</html>
+https://app.storify.asia/privacy-policy.html
 ```
 
-Upload file ini ke server, lalu akses via `https://storify.asia/privacy-policy.html`
+> ✅ File `privacy-policy.html` **sudah ada** di root project. Saat production deploy, file ini otomatis tersedia di URL di atas.
+
+Cek akses sebelum submit - buka dari browser incognito:
+```
+https://app.storify.asia/privacy-policy.html
+```
 
 Paste URL ke field **Privacy policy URL** di Play Console.
 
@@ -402,7 +396,8 @@ Paste URL ke field **Privacy policy URL** di Play Console.
 ### 5.2. Upload AAB
 
 1. Klik **Upload** di bagian "App bundles"
-2. Pilih file: `release/storify-v1.0.aab` (2.97 MB)
+2. Pilih file: **`release/storify-v1.1.aab`** (3.2 MB)  
+   *(Pastikan sudah rebuild fresh dari kode terbaru - lihat bagian "Cara Build AAB Terbaru" di atas)*
 3. Tunggu upload selesai (1-2 menit)
 4. Setelah upload, Google akan scan/analyze AAB:
    - ✅ No issues found: Lanjut
@@ -529,10 +524,16 @@ Setelah approved:
 **Update App:**
 1. Increment version di `android/app/build.gradle`:
    ```gradle
-   versionCode 2  // naik dari 1
+   versionCode 2  // naik dari 1 setiap release
    versionName "1.1"
    ```
-2. Build new AAB: `cd android; ./gradlew bundleRelease`
+2. Rebuild AAB:
+   ```bash
+   npm run build
+   npx cap sync android
+   cd android && ./gradlew bundleRelease && cd ..
+   copy android\app\build\outputs\bundle\release\app-release.aab release\storify-v1.1.aab
+   ```
 3. Upload ke Production release baru
 4. Add release notes (what's new)
 5. Submit for review
@@ -551,7 +552,7 @@ Sebelum submit, pastikan:
 - [ ] Description lengkap dan menarik
 - [ ] Privacy policy URL valid dan accessible
 - [ ] Contact email valid (support@storify.asia)
-- [ ] AAB file uploaded (storify-v1.0.aab)
+- [ ] AAB file uploaded (storify-v1.1.aab) - pastikan sudah rebuild terbaru
 - [ ] Release notes ditulis
 - [ ] Content rating complete
 - [ ] Data safety complete
@@ -591,7 +592,7 @@ Sebelum submit, pastikan:
 - Privacy policy tidak ada contact info
 
 **Fix:**
-- Host privacy policy di `https://storify.asia/privacy-policy`
+- Host privacy policy di `https://app.storify.asia/privacy-policy`
 - Test access dari incognito browser
 - Tambahkan semua data yang collected
 - Tambahkan email contact: support@storify.asia

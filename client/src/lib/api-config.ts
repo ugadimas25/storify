@@ -21,13 +21,13 @@ const isNativePlatform = (() => {
  * API base URL - empty for web (relative URLs), full URL for native apps
  */
 export const API_BASE_URL = isNativePlatform
-  ? 'https://storify.asia'
+  ? 'https://app.storify.asia'
   : '';
 
 /**
  * Build a full API URL. 
  * In browser: returns "/api/books" (relative)
- * In Capacitor: returns "https://storify.asia/api/books" (absolute)
+ * In Capacitor: returns "https://app.storify.asia/api/books" (absolute)
  */
 export function apiUrl(path: string): string {
   const url = `${API_BASE_URL}${path}`;

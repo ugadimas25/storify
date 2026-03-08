@@ -1,6 +1,6 @@
 [Unit]
 Description=Storify Insights Application
-Documentation=https://storify.asia
+Documentation=https://app.storify.asia
 After=network.target postgresql.service
 
 [Service]

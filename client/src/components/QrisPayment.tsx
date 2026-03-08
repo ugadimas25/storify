@@ -5,12 +5,14 @@ import {
   useQrisPaymentStatus,
   useQrisActiveSubscription,
   useListeningStatus,
+  useValidateReferralCode,
 } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, XCircle, Crown, Music, Clock, RefreshCw, QrCode } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, CheckCircle, XCircle, Crown, Music, Clock, RefreshCw, QrCode, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PaymentState = "idle" | "pending" | "paid" | "expired" | "failed";
@@ -26,12 +28,20 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
   const { data: activeSubscription } = useQrisActiveSubscription();
   const { data: listeningStatus } = useListeningStatus();
   const createPayment = useCreateQrisPayment();
+  const validateReferral = useValidateReferralCode();
 
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [currentTransaction, setCurrentTransaction] = useState<string | null>(null);
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [qrisContent, setQrisContent] = useState<string>("");
+  
+  // Referral code state
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [referralValid, setReferralValid] = useState<boolean>(false);
+  const [referralMessage, setReferralMessage] = useState<string>("");
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [showReferralInput, setShowReferralInput] = useState<boolean>(false);
 
   // Poll QRIS payment status
   const { data: paymentStatus } = useQrisPaymentStatus(
@@ -91,6 +101,38 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
     }).format(price);
   };
 
+  // Validate referral code
+  const handleValidateReferral = async () => {
+    if (!referralCode.trim()) {
+      setReferralMessage("Kode referral tidak boleh kosong");
+      setReferralValid(false);
+      return;
+    }
+
+    try {
+      const result = await validateReferral.mutateAsync(referralCode);
+      setReferralValid(result.valid);
+      setReferralMessage(result.message);
+      if (result.valid) {
+        setDiscountPercent(result.discountPercent);
+      } else {
+        setDiscountPercent(0);
+      }
+    } catch (error: any) {
+      setReferralMessage("Gagal memvalidasi kode referral");
+      setReferralValid(false);
+      setDiscountPercent(0);
+    }
+  };
+
+  // Clear referral code
+  const handleClearReferral = () => {
+    setReferralCode("");
+    setReferralValid(false);
+    setReferralMessage("");
+    setDiscountPercent(0);
+  };
+
   // Handle plan selection and QRIS payment creation
   const handleSelectPlan = async (planId: number) => {
     if (!user) {
@@ -101,7 +143,10 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
     setSelectedPlanId(planId);
 
     try {
-      const transaction = await createPayment.mutateAsync(planId);
+      const transaction = await createPayment.mutateAsync({
+        planId,
+        referralCode: referralValid ? referralCode : undefined,
+      });
       setCurrentTransaction(transaction.id);
       setQrisContent(transaction.qrisContent || "");
       setPaymentState("pending");
@@ -116,6 +161,8 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
     } catch (error: any) {
       console.error("QRIS payment creation failed:", error);
       alert(error.message || "Gagal membuat pembayaran QRIS");
+      // Reset referral on error
+      handleClearReferral();
     }
   };
 
@@ -126,6 +173,7 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
     setCurrentTransaction(null);
     setQrisContent("");
     setTimeLeft(0);
+    handleClearReferral();
   };
 
   // If user has active subscription
@@ -223,6 +271,10 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
   // QR Code display (pending payment)
   if (paymentState === "pending" && qrisContent) {
     const selectedPlan = plans?.find((p) => p.id === selectedPlanId);
+    const finalAmount = referralValid && discountPercent > 0
+      ? Math.floor((selectedPlan?.price || 0) * (100 - discountPercent) / 100)
+      : selectedPlan?.price || 0;
+    const savedAmount = (selectedPlan?.price || 0) - finalAmount;
 
     return (
       <Card className="w-full max-w-md mx-auto">
@@ -232,7 +284,24 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
             Scan QR Code QRIS
           </CardTitle>
           <CardDescription>
-            {selectedPlan?.name} - {formatPrice(selectedPlan?.price || 0)}
+            {selectedPlan?.name}
+            {referralValid && savedAmount > 0 ? (
+              <div className="mt-2 space-y-1">
+                <div className="text-sm line-through text-muted-foreground">
+                  {formatPrice(selectedPlan?.price || 0)}
+                </div>
+                <div className="text-lg font-bold text-green-600">
+                  {formatPrice(finalAmount)}
+                </div>
+                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                  Hemat {formatPrice(savedAmount)} dengan kode referral!
+                </Badge>
+              </div>
+            ) : (
+              <div className="text-lg font-bold mt-1">
+                {formatPrice(finalAmount)}
+              </div>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -336,6 +405,96 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
         )}
       </div>
 
+      {/* Referral Code Section */}
+      <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800">
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Tag className="w-5 h-5 text-purple-600" />
+                <h3 className="font-semibold text-purple-900 dark:text-purple-100">
+                  Punya Kode Referral?
+                </h3>
+              </div>
+              {!showReferralInput && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowReferralInput(true)}
+                  className="text-purple-600 hover:text-purple-700"
+                >
+                  Masukkan Kode
+                </Button>
+              )}
+            </div>
+
+            {showReferralInput && (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Contoh: STORIFY-ABC123"
+                    value={referralCode}
+                    onChange={(e) => {
+                      setReferralCode(e.target.value.toUpperCase());
+                      setReferralValid(false);
+                      setReferralMessage("");
+                    }}
+                    className="flex-1"
+                    disabled={referralValid}
+                  />
+                  {!referralValid ? (
+                    <Button
+                      onClick={handleValidateReferral}
+                      disabled={!referralCode.trim() || validateReferral.isPending}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {validateReferral.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Validasi"
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={handleClearReferral}
+                      className="border-purple-300"
+                    >
+                      Hapus
+                    </Button>
+                  )}
+                </div>
+
+                {referralMessage && (
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 p-3 rounded-lg text-sm",
+                      referralValid
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                        : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
+                    )}
+                  >
+                    {referralValid ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      <XCircle className="w-4 h-4" />
+                    )}
+                    <span>{referralMessage}</span>
+                  </div>
+                )}
+
+                {referralValid && discountPercent > 0 && (
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-3 rounded-lg text-center">
+                    <p className="font-bold text-lg">🎉 Diskon {discountPercent}% Aktif!</p>
+                    <p className="text-sm opacity-90">Hemat hingga ribuan rupiah</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Plans */}
       <div className="grid gap-4 md:grid-cols-3">
         {plans?.map((plan) => {
@@ -363,12 +522,28 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
               </CardHeader>
               <CardContent className="text-center space-y-4">
                 <div>
-                  <p className="text-3xl font-bold text-primary">
-                    {formatPrice(plan.price)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatPrice(pricePerDay)}/hari
-                  </p>
+                  {referralValid && discountPercent > 0 ? (
+                    <>
+                      <p className="text-sm text-muted-foreground line-through">
+                        {formatPrice(plan.price)}
+                      </p>
+                      <p className="text-3xl font-bold text-green-600">
+                        {formatPrice(Math.floor(plan.price * (100 - discountPercent) / 100))}
+                      </p>
+                      <Badge variant="secondary" className="mt-1 bg-green-100 text-green-700">
+                        Hemat {formatPrice(Math.floor(plan.price * discountPercent / 100))}
+                      </Badge>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-primary">
+                        {formatPrice(plan.price)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatPrice(pricePerDay)}/hari
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 <ul className="text-sm text-left space-y-2">

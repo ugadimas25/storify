@@ -55,6 +55,14 @@ export interface IStorage {
   // Payment Transactions
   createPaymentTransaction(userId: string, planId: number, amount: number, gatewayData?: {
     paymentGateway?: string;
+    originalAmount?: number;
+    discountAmount?: number;
+    referralCode?: string;
+    referralOwnerId?: string;
+    referralOwnerName?: string;
+    referralCommissionPercent?: number;
+    referralCommissionAmount?: number;
+    referralCommissionStatus?: string;
     // DOKU fields
     dokuInvoiceNumber?: string;
     dokuPaymentUrl?: string;
@@ -65,12 +73,22 @@ export interface IStorage {
     qrisContent?: string;
     qrisInvoiceId?: string;
     qrisTransactionNumber?: string;
+    // Midtrans fields
+    midtransOrderId?: string;
+    midtransSnapToken?: string;
+    midtransRedirectUrl?: string;
+    midtransTransactionId?: string;
+    midtransPaymentType?: string;
+    midtransTransactionTime?: string;
+    midtransTransactionStatus?: string;
     expiredAt?: Date;
   }): Promise<PaymentTransaction>;
   updatePaymentTransaction(id: number, data: Partial<PaymentTransaction>): Promise<PaymentTransaction | undefined>;
   getPaymentTransaction(id: number): Promise<PaymentTransaction | undefined>;
   getPaymentTransactionByInvoiceNumber(invoiceNumber: string): Promise<PaymentTransaction | undefined>;
   getPaymentTransactionByQrisInvoiceId(qrisInvoiceId: string): Promise<PaymentTransaction | undefined>;
+  getPaymentTransactionByMidtransOrderId(orderId: string): Promise<PaymentTransaction | undefined>;
+  getUserPaymentTransactions(userId: string): Promise<PaymentTransaction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -440,6 +458,14 @@ export class DatabaseStorage implements IStorage {
     amount: number, 
     gatewayData?: {
       paymentGateway?: string;
+      originalAmount?: number;
+      discountAmount?: number;
+      referralCode?: string;
+      referralOwnerId?: string;
+      referralOwnerName?: string;
+      referralCommissionPercent?: number;
+      referralCommissionAmount?: number;
+      referralCommissionStatus?: string;
       // DOKU fields
       dokuInvoiceNumber?: string;
       dokuPaymentUrl?: string;
@@ -450,6 +476,14 @@ export class DatabaseStorage implements IStorage {
       qrisContent?: string;
       qrisInvoiceId?: string;
       qrisTransactionNumber?: string;
+      // Midtrans fields
+      midtransOrderId?: string;
+      midtransSnapToken?: string;
+      midtransRedirectUrl?: string;
+      midtransTransactionId?: string;
+      midtransPaymentType?: string;
+      midtransTransactionTime?: string;
+      midtransTransactionStatus?: string;
       expiredAt?: Date;
     }
   ): Promise<PaymentTransaction> {
@@ -463,6 +497,16 @@ export class DatabaseStorage implements IStorage {
       userId,
       planId,
       amount,
+      originalAmount: gatewayData?.originalAmount ?? amount,
+      discountAmount: gatewayData?.discountAmount ?? 0,
+      referralCode: gatewayData?.referralCode || null,
+      referralOwnerId: gatewayData?.referralOwnerId || null,
+      referralOwnerName: gatewayData?.referralOwnerName || null,
+      referralCommissionPercent: gatewayData?.referralCommissionPercent ?? 0,
+      referralCommissionAmount: gatewayData?.referralCommissionAmount ?? 0,
+      referralCommissionStatus: gatewayData?.referralCode
+        ? (gatewayData?.referralCommissionStatus || "pending")
+        : null,
       status: 'pending',
       paymentGateway: gatewayData?.paymentGateway || 'doku',
       dokuInvoiceNumber: gatewayData?.dokuInvoiceNumber || null,
@@ -473,6 +517,13 @@ export class DatabaseStorage implements IStorage {
       qrisContent: gatewayData?.qrisContent || null,
       qrisInvoiceId: gatewayData?.qrisInvoiceId || null,
       qrisTransactionNumber: gatewayData?.qrisTransactionNumber || null,
+      midtransOrderId: gatewayData?.midtransOrderId || null,
+      midtransSnapToken: gatewayData?.midtransSnapToken || null,
+      midtransRedirectUrl: gatewayData?.midtransRedirectUrl || null,
+      midtransTransactionId: gatewayData?.midtransTransactionId || null,
+      midtransPaymentType: gatewayData?.midtransPaymentType || null,
+      midtransTransactionTime: gatewayData?.midtransTransactionTime || null,
+      midtransTransactionStatus: gatewayData?.midtransTransactionStatus || null,
       expiredAt,
     }).returning();
 
@@ -506,6 +557,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(paymentTransactions)
       .where(eq(paymentTransactions.qrisInvoiceId, qrisInvoiceId));
+    return transaction;
+  }
+
+  async getPaymentTransactionByMidtransOrderId(orderId: string): Promise<PaymentTransaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(paymentTransactions)
+      .where(eq(paymentTransactions.midtransOrderId, orderId));
     return transaction;
   }
 }

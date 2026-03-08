@@ -81,12 +81,35 @@ export const listeningHistory = pgTable("listening_history", {
   playedAt: timestamp("played_at").defaultNow().notNull(),
 });
 
+// Referral codes - users can share to get benefits
+export const referralCodes = pgTable("referral_codes", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(), // e.g. "STORIFY123"
+  userId: text("user_id").notNull(), // Owner of the referral code
+  discountPercent: integer("discount_percent").notNull().default(10), // Discount percentage (default 10%)
+  commissionPercent: integer("commission_percent").notNull().default(5), // Commission for referral owner (default 5%)
+  usageCount: integer("usage_count").notNull().default(0), // How many times used
+  maxUsage: integer("max_usage"), // Max times can be used (null = unlimited)
+  isActive: boolean("is_active").notNull().default(true),
+  expiresAt: timestamp("expires_at"), // Optional expiration date
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Payment transactions for DOKU and QRIS (Pewaca)
 export const paymentTransactions = pgTable("payment_transactions", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
   planId: integer("plan_id").notNull(),
   amount: integer("amount").notNull(),
+  originalAmount: integer("original_amount"), // Original price before discount
+  discountAmount: integer("discount_amount").default(0), // Discount applied
+  referralCode: text("referral_code"), // Referral code used (if any)
+  referralOwnerId: text("referral_owner_id"), // Owner of the referral code
+  referralOwnerName: text("referral_owner_name"), // Snapshot of referral owner name
+  referralCommissionPercent: integer("referral_commission_percent").default(0), // Commission percent snapshot
+  referralCommissionAmount: integer("referral_commission_amount").default(0), // Commission amount snapshot
+  referralCommissionStatus: text("referral_commission_status"), // pending | approved | paid | cancelled
+  referralCommissionPaidAt: timestamp("referral_commission_paid_at"),
   status: text("status").notNull().default("pending"), // pending, paid, expired, failed
   paymentGateway: text("payment_gateway").notNull().default("doku"), // 'doku' | 'qris_pewaca'
   
@@ -105,6 +128,15 @@ export const paymentTransactions = pgTable("payment_transactions", {
   qrisTransactionNumber: text("qris_transaction_number"), // Pewaca transaction number
   paymentMethodBy: text("payment_method_by"), // GoPay, OVO, DANA, etc (for QRIS)
   
+  // Midtrans specific fields
+  midtransOrderId: text("midtrans_order_id"), // Our order ID sent to Midtrans
+  midtransSnapToken: text("midtrans_snap_token"), // Snap token for payment page
+  midtransRedirectUrl: text("midtrans_redirect_url"), // Snap payment page URL
+  midtransTransactionId: text("midtrans_transaction_id"), // Midtrans transaction ID
+  midtransPaymentType: text("midtrans_payment_type"), // credit_card, gopay, bank_transfer, etc
+  midtransTransactionTime: text("midtrans_transaction_time"), // Transaction time from Midtrans
+  midtransTransactionStatus: text("midtrans_transaction_status"), // capture, settlement, pending, deny, cancel, expire
+  
   expiredAt: timestamp("expired_at"),
   paidAt: timestamp("paid_at"),
   paymentCustomerName: text("payment_customer_name"),
@@ -119,6 +151,7 @@ export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
 export const insertListeningHistorySchema = createInsertSchema(listeningHistory).omit({ id: true, playedAt: true });
 export const insertPaymentTransactionSchema = createInsertSchema(paymentTransactions).omit({ id: true, createdAt: true });
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({ id: true, createdAt: true });
+export const insertReferralCodeSchema = createInsertSchema(referralCodes).omit({ id: true, createdAt: true });
 
 export type Book = typeof books.$inferSelect;
 export type InsertBook = z.infer<typeof insertBookSchema>;
@@ -136,6 +169,8 @@ export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type InsertReferralCode = z.infer<typeof insertReferralCodeSchema>;
 
 export type CreateBookRequest = InsertBook;
 export type UpdateBookRequest = Partial<InsertBook>;

@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     // Allow navigation to external URLs (for DOKU payment, etc.)
     allowNavigation: [
-      'storify.asia',
+      'app.storify.asia',
       '*.storify.asia',
       '*.doku.com',
       '*.pewacaold-1379748683.cos.ap-jakarta.myqcloud.com',

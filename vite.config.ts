@@ -17,15 +17,6 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    rollupOptions: {
-      external: [
-        '@capacitor/core',
-        '@capacitor/app',
-        '@capacitor/status-bar',
-        '@capacitor/splash-screen',
-        '@capacitor/haptics',
-      ],
-    },
   },
   server: {
     fs: {

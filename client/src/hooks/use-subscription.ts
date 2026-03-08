@@ -239,12 +239,12 @@ export function useQrisActiveSubscription() {
 // Create QRIS payment transaction (via Django API)
 export function useCreateQrisPayment() {
   return useMutation({
-    mutationFn: async (planId: number) => {
+    mutationFn: async ({ planId, referralCode }: { planId: number; referralCode?: string }) => {
       const res = await fetch(apiUrl("/api/qris/payment/create"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, referralCode }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -268,5 +268,73 @@ export function useQrisPaymentStatus(transactionId: string | null, enabled: bool
     },
     enabled: !!transactionId && enabled,
     refetchInterval: enabled ? 3000 : false, // Poll every 3 seconds (per QRIS guide)
+  });
+}
+
+// ============= REFERRAL CODE HOOKS =============
+
+export interface ReferralCodeValidation {
+  valid: boolean;
+  discountPercent: number;
+  ownerId: string | null;
+  message: string;
+}
+
+export interface ReferralStats {
+  code: string | null;
+  totalUsage: number;
+  discountPercent: number;
+}
+
+// Get user's referral code
+export function useMyReferralCode() {
+  const { user } = useAuth();
+
+  return useQuery<{ code: string }>({
+    queryKey: ["my-referral-code", user?.id],
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/api/referral/my-code"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch referral code");
+      return res.json();
+    },
+    enabled: !!user,
+  });
+}
+
+// Get referral stats
+export function useReferralStats() {
+  const { user } = useAuth();
+
+  return useQuery<ReferralStats>({
+    queryKey: ["referral-stats", user?.id],
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/api/referral/stats"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch referral stats");
+      return res.json();
+    },
+    enabled: !!user,
+  });
+}
+
+// Validate referral code
+export function useValidateReferralCode() {
+  return useMutation({
+    mutationFn: async (code: string) => {
+      const res = await fetch(apiUrl("/api/referral/validate"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok && res.status !== 400) {
+        throw new Error(data.message || "Failed to validate referral code");
+      }
+      return data as ReferralCodeValidation;
+    },
   });
 }

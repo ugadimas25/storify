@@ -378,14 +378,54 @@ export async function registerRoutes(
 
   // Create QRIS payment transaction (proxy to Django)
   app.post('/api/qris/payment/create', isAuthenticated, async (req: any, res) => {
-    const { planId } = req.body;
+    const { planId, referralCode } = req.body;
 
     if (!planId) {
       return res.status(400).json({ message: "Plan ID is required" });
     }
 
     try {
-      const { createQrisPayment } = await import("./pewaca");
+      const { createQrisPayment, fetchQrisPlans } = await import("./pewaca");
+      const { validateReferralCode, calculateDiscount, calculateCommission, incrementReferralUsage } = await import("./referral");
+
+      // Get plan details to know the price
+      const plans = await fetchQrisPlans();
+      const plan = plans.find(p => p.id === planId);
+      
+      if (!plan) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+
+      let finalAmount = plan.price;
+      let discountAmount = 0;
+      let referralOwnerId = null;
+      let referralOwnerName = null;
+      let validatedCode = null;
+      let referralCommissionPercent = 0;
+      let referralCommissionAmount = 0;
+
+      // Validate and apply referral code if provided
+      if (referralCode && referralCode.trim() !== "") {
+        const validation = await validateReferralCode(referralCode, req.user.id);
+        
+        if (!validation.valid) {
+          return res.status(400).json({ 
+            message: validation.message,
+            valid: false 
+          });
+        }
+
+        const discount = calculateDiscount(plan.price, validation.discountPercent);
+        finalAmount = discount.finalAmount;
+        discountAmount = discount.discountAmount;
+        referralOwnerId = validation.ownerId;
+        referralOwnerName = validation.ownerName;
+        referralCommissionPercent = validation.commissionPercent;
+        referralCommissionAmount = calculateCommission(finalAmount, validation.commissionPercent);
+        validatedCode = referralCode.toUpperCase().trim();
+
+        console.log(`[Referral] Code ${validatedCode} applied: ${plan.price} -> ${finalAmount} (discount: ${discountAmount})`);
+      }
 
       // Pass Storify user info so Django can create/find StorifyUser
       const userInfo = {
@@ -394,19 +434,65 @@ export async function registerRoutes(
         storifyUserId: String(req.user.id),
       };
 
+      // For now, we can't pass custom amount to Pewaca API
+      // So we create the transaction with original amount
+      // and store discount info locally for tracking
       const transaction = await createQrisPayment(planId, userInfo);
+
+      const expiredAt = transaction.expiredAt ? new Date(transaction.expiredAt) : new Date(Date.now() + 60 * 60 * 1000);
+      const localTransaction = await storage.createPaymentTransaction(
+        String(req.user.id),
+        planId,
+        finalAmount,
+        {
+          paymentGateway: "qris_pewaca",
+          originalAmount: plan.price,
+          discountAmount,
+          referralCode: validatedCode || undefined,
+          referralOwnerId: referralOwnerId || undefined,
+          referralOwnerName: referralOwnerName || undefined,
+          referralCommissionPercent,
+          referralCommissionAmount,
+          qrisContent: transaction.qrisContent,
+          qrisInvoiceId: transaction.qrisInvoiceId,
+          qrisTransactionNumber: transaction.transactionNumber,
+          expiredAt,
+        }
+      );
+
+      // If referral code was used, increment usage count
+      if (validatedCode) {
+        await incrementReferralUsage(validatedCode);
+      }
+
+      // Add discount info to response (for UI display)
+      const transactionWithDiscount = {
+        ...transaction,
+        originalAmount: plan.price,
+        discountAmount,
+        finalAmount,
+        referralCode: validatedCode,
+        referralOwnerId,
+        referralOwnerName,
+        referralCommissionPercent,
+        referralCommissionAmount,
+        localTransactionId: localTransaction.id,
+      };
 
       // Log activity locally
       const userId = req.user.id || req.user.claims?.sub;
       if (userId) {
         logActivity(req, userId, "create_qris_payment", "subscription", planId.toString(), {
           planName: transaction.plan?.name,
-          amount: transaction.amount,
+          amount: finalAmount,
+          originalAmount: plan.price,
+          discountAmount,
+          referralCode: validatedCode,
           qrisInvoiceId: transaction.qrisInvoiceId,
         });
       }
 
-      res.json(transaction);
+      res.json(transactionWithDiscount);
     } catch (error: any) {
       console.error("Error creating QRIS payment:", error);
       res.status(500).json({ message: error.message || "Failed to create QRIS payment" });
@@ -420,19 +506,43 @@ export async function registerRoutes(
     try {
       const { checkQrisPaymentStatus } = await import("./pewaca");
       const transaction = await checkQrisPaymentStatus(transactionId);
+      const localTransaction = transaction.qrisInvoiceId
+        ? await storage.getPaymentTransactionByQrisInvoiceId(transaction.qrisInvoiceId)
+        : undefined;
 
       // If payment just succeeded, log locally and create local subscription
       if (transaction.status === 'paid') {
-        const userId = req.session?.user?.id || req.user?.id || req.user?.claims?.sub;
-        if (userId && transaction.plan) {
+        if (localTransaction) {
+          const localUpdate: any = {
+            status: "paid",
+            paidAt: transaction.paidAt ? new Date(transaction.paidAt) : new Date(),
+            paymentCustomerName: transaction.paymentCustomerName || null,
+            paymentMethodBy: transaction.paymentMethodBy || null,
+          };
+
+          if (localTransaction.referralCode) {
+            localUpdate.referralCommissionStatus = "approved";
+          }
+
+          await storage.updatePaymentTransaction(localTransaction.id, localUpdate);
+        }
+
+        const userId = localTransaction?.userId || req.session?.user?.id || req.user?.id || req.user?.claims?.sub;
+        const planId = localTransaction?.planId || transaction.plan?.id;
+        const localTransactionId = localTransaction?.id?.toString() || transaction.id;
+        if (userId && planId) {
           // Also create subscription in local DB for consistency
           try {
-            await storage.createSubscription(userId, transaction.plan.id, transaction.id);
+            await storage.createSubscription(userId, planId, localTransactionId);
           } catch (e) {
             // May fail if already created - that's OK
             console.log("[QRIS] Local subscription creation skipped (may already exist):", (e as any).message);
           }
         }
+      } else if (localTransaction && (transaction.status === "expired" || transaction.status === "failed")) {
+        await storage.updatePaymentTransaction(localTransaction.id, {
+          status: transaction.status,
+        });
       }
 
       res.json(transaction);
@@ -469,12 +579,64 @@ export async function registerRoutes(
     }
   });
 
+  // ============= REFERRAL CODE ROUTES =============
+
+  // Get user's referral code
+  app.get('/api/referral/my-code', isAuthenticated, async (req: any, res) => {
+    try {
+      const { getUserReferralCode } = await import("./referral");
+      const code = await getUserReferralCode(req.user.id);
+      res.json({ code });
+    } catch (error: any) {
+      console.error("Error getting referral code:", error);
+      res.status(500).json({ message: "Failed to get referral code" });
+    }
+  });
+
+  // Get referral stats
+  app.get('/api/referral/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const { getReferralStats } = await import("./referral");
+      const stats = await getReferralStats(req.user.id);
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error getting referral stats:", error);
+      res.status(500).json({ message: "Failed to get referral stats" });
+    }
+  });
+
+  // Validate referral code (no authentication required)
+  app.post('/api/referral/validate', async (req: any, res) => {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ 
+        valid: false, 
+        message: "Kode referral tidak boleh kosong" 
+      });
+    }
+
+    try {
+      const { validateReferralCode } = await import("./referral");
+      // Pass userId if user is authenticated, otherwise null
+      const userId = req.user?.id || null;
+      const result = await validateReferralCode(code, userId);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error validating referral code:", error);
+      res.status(500).json({ 
+        valid: false, 
+        message: "Gagal memvalidasi kode referral" 
+      });
+    }
+  });
+
   // ============= DOKU PAYMENT ROUTES =============
 
   // Create payment transaction (generate DOKU Checkout)
   app.post('/api/payment/create', isAuthenticated, async (req: any, res) => {
     const userId = req.user.id;
-    const { planId } = req.body;
+    const { planId, referralCode } = req.body;
 
     if (!planId) {
       return res.status(400).json({ message: "Plan ID is required" });
@@ -487,12 +649,39 @@ export async function registerRoutes(
 
     try {
       const { createDokuCheckout } = await import("./doku");
-      
-      const invoiceNumber = `INV-${Date.now()}-${userId.slice(-6)}`;
+      const { validateReferralCode, calculateDiscount, calculateCommission, incrementReferralUsage } = await import("./referral");
+      const invoiceNumber = `INV-${Date.now()}-${String(userId).slice(-6)}`;
+
+      let finalAmount = plan.price;
+      let discountAmount = 0;
+      let referralOwnerId: string | null = null;
+      let referralOwnerName: string | null = null;
+      let validatedCode: string | null = null;
+      let referralCommissionPercent = 0;
+      let referralCommissionAmount = 0;
+
+      if (referralCode && referralCode.trim() !== "") {
+        const validation = await validateReferralCode(referralCode, String(req.user.id));
+        if (!validation.valid) {
+          return res.status(400).json({
+            message: validation.message,
+            valid: false,
+          });
+        }
+
+        const discount = calculateDiscount(plan.price, validation.discountPercent);
+        finalAmount = discount.finalAmount;
+        discountAmount = discount.discountAmount;
+        referralOwnerId = validation.ownerId;
+        referralOwnerName = validation.ownerName;
+        validatedCode = referralCode.toUpperCase().trim();
+        referralCommissionPercent = validation.commissionPercent;
+        referralCommissionAmount = calculateCommission(finalAmount, validation.commissionPercent);
+      }
 
       const dokuResponse = await createDokuCheckout({
         invoiceNumber,
-        amount: plan.price,
+        amount: finalAmount,
         customerName: req.user.name || req.user.email || "User",
         customerEmail: req.user.email || "user@storify.asia",
         itemName: `Storify Premium - ${plan.name}`,
@@ -519,8 +708,15 @@ export async function registerRoutes(
       const transaction = await storage.createPaymentTransaction(
         userId, 
         planId, 
-        plan.price,
+        finalAmount,
         {
+          originalAmount: plan.price,
+          discountAmount,
+          referralCode: validatedCode || undefined,
+          referralOwnerId: referralOwnerId || undefined,
+          referralOwnerName: referralOwnerName || undefined,
+          referralCommissionPercent,
+          referralCommissionAmount,
           dokuInvoiceNumber: invoiceNumber,
           dokuPaymentUrl: dokuResponse.response.payment.url,
           dokuSessionId: dokuResponse.response.order.session_id,
@@ -530,14 +726,26 @@ export async function registerRoutes(
         }
       );
 
+      if (validatedCode) {
+        await incrementReferralUsage(validatedCode);
+      }
+
       // Log activity
       logActivity(req, userId, "create_payment", "subscription", planId.toString(), {
         planName: plan.name,
-        amount: plan.price,
+        amount: finalAmount,
+        originalAmount: plan.price,
+        discountAmount,
+        referralCode: validatedCode,
+        referralOwnerName,
+        referralCommissionAmount,
         invoiceNumber,
       });
 
-      res.json(transaction);
+      res.json({
+        ...transaction,
+        finalAmount,
+      });
     } catch (error: any) {
       console.error("Error creating DOKU checkout:", error);
       res.status(500).json({ message: error.message || "Failed to create payment" });
@@ -562,6 +770,7 @@ export async function registerRoutes(
       if (dokuPaymentMethod) updatedData.dokuPaymentMethod = dokuPaymentMethod;
       if (dokuPaymentChannel) updatedData.dokuPaymentChannel = dokuPaymentChannel;
       if (paymentCustomerName) updatedData.paymentCustomerName = paymentCustomerName;
+      if (transaction.referralCode) updatedData.referralCommissionStatus = "approved";
 
       // Create subscription when payment is successful
       await storage.createSubscription(transaction.userId, transaction.planId, transactionId.toString());
@@ -633,6 +842,7 @@ export async function registerRoutes(
         updatedData.paidAt = txn.date ? new Date(txn.date) : new Date();
         updatedData.dokuPaymentMethod = service?.id || null;
         updatedData.dokuPaymentChannel = channel?.id || null;
+        if (localTransaction.referralCode) updatedData.referralCommissionStatus = "approved";
 
         // Create subscription when payment is successful
         await storage.createSubscription(
@@ -655,6 +865,227 @@ export async function registerRoutes(
       res.status(200).json({ message: "OK" });
     } catch (error: any) {
       console.error("Error processing DOKU webhook:", error);
+      res.status(500).json({ message: error.message || "Webhook processing failed" });
+    }
+  });
+
+  // ============= MIDTRANS PAYMENT ROUTES =============
+
+  // Create Midtrans Snap payment transaction
+  app.post('/api/midtrans/payment/create', isAuthenticated, async (req: any, res) => {
+    const userId = req.user.id;
+    const { planId, referralCode } = req.body;
+
+    if (!planId) {
+      return res.status(400).json({ message: "Plan ID is required" });
+    }
+
+    const plan = await storage.getSubscriptionPlan(planId);
+    if (!plan) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    try {
+      const { createMidtransSnap } = await import("./midtrans");
+      const { validateReferralCode, calculateDiscount, calculateCommission, incrementReferralUsage } = await import("./referral");
+      
+      const orderId = `STORIFY-${Date.now()}-${String(userId).slice(-6)}`;
+
+      let finalAmount = plan.price;
+      let discountAmount = 0;
+      let referralOwnerId: string | null = null;
+      let referralOwnerName: string | null = null;
+      let validatedCode: string | null = null;
+      let referralCommissionPercent = 0;
+      let referralCommissionAmount = 0;
+
+      // Validate and apply referral code if provided
+      if (referralCode && referralCode.trim() !== "") {
+        const validation = await validateReferralCode(referralCode, String(req.user.id));
+        if (!validation.valid) {
+          return res.status(400).json({
+            message: validation.message,
+            valid: false,
+          });
+        }
+
+        const discount = calculateDiscount(plan.price, validation.discountPercent);
+        finalAmount = discount.finalAmount;
+        discountAmount = discount.discountAmount;
+        referralOwnerId = validation.ownerId;
+        referralOwnerName = validation.ownerName;
+        validatedCode = referralCode.toUpperCase().trim();
+        referralCommissionPercent = validation.commissionPercent;
+        referralCommissionAmount = calculateCommission(finalAmount, validation.commissionPercent);
+      }
+
+      // Create Midtrans Snap transaction
+      const snapResponse = await createMidtransSnap({
+        orderId,
+        amount: finalAmount,
+        customerName: req.user.name || req.user.email || "User",
+        customerEmail: req.user.email || "user@storify.asia",
+        itemName: `Storify Premium - ${plan.name}`,
+        itemId: `plan-${plan.id}`,
+        userId: String(userId),
+        planId: String(planId),
+        referralCode: validatedCode || undefined,
+      });
+
+      // Save transaction to database
+      const transaction = await storage.createPaymentTransaction(
+        userId, 
+        planId, 
+        finalAmount,
+        {
+          paymentGateway: 'midtrans',
+          originalAmount: plan.price,
+          discountAmount,
+          referralCode: validatedCode || undefined,
+          referralOwnerId: referralOwnerId || undefined,
+          referralOwnerName: referralOwnerName || undefined,
+          referralCommissionPercent,
+          referralCommissionAmount,
+          midtransOrderId: orderId,
+          midtransSnapToken: snapResponse.token,
+          midtransRedirectUrl: snapResponse.redirect_url,
+          expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        }
+      );
+
+      if (validatedCode) {
+        await incrementReferralUsage(validatedCode);
+      }
+
+      // Log activity
+      logActivity(req, userId, "create_midtrans_payment", "subscription", planId.toString(), {
+        planName: plan.name,
+        amount: finalAmount,
+        originalAmount: plan.price,
+        discountAmount,
+        referralCode: validatedCode,
+        referralOwnerName,
+        referralCommissionAmount,
+        orderId,
+      });
+
+      res.json({
+        ...transaction,
+        snapToken: snapResponse.token,
+        redirectUrl: snapResponse.redirect_url,
+      });
+    } catch (error: any) {
+      console.error("Error creating Midtrans Snap:", error);
+      res.status(500).json({ message: error.message || "Failed to create payment" });
+    }
+  });
+
+  // Get Midtrans transaction status
+  app.get('/api/midtrans/payment/:orderId/status', isAuthenticated, async (req: any, res) => {
+    const { orderId } = req.params;
+
+    try {
+      const { getMidtransTransactionStatus, isTransactionSuccessful, getStatusMessage } = await import("./midtrans");
+      
+      const status = await getMidtransTransactionStatus(orderId);
+      const isSuccess = isTransactionSuccessful(status);
+      const message = getStatusMessage(status);
+
+      res.json({
+        orderId: status.order_id,
+        transactionId: status.transaction_id,
+        status: status.transaction_status,
+        paymentType: status.payment_type,
+        grossAmount: status.gross_amount,
+        transactionTime: status.transaction_time,
+        isSuccess,
+        message,
+      });
+    } catch (error: any) {
+      console.error("Error checking Midtrans status:", error);
+      res.status(500).json({ message: error.message || "Failed to check status" });
+    }
+  });
+
+  // Midtrans HTTP Notification webhook (no auth required, verified by signature)
+  app.post('/api/webhook/midtrans', async (req, res) => {
+    try {
+      const { 
+        verifyNotificationSignature, 
+        isTransactionSuccessful,
+        isTransactionPending,
+        isTransactionFailed 
+      } = await import("./midtrans");
+
+      console.log("[Midtrans Webhook] Received notification:", JSON.stringify(req.body, null, 2));
+
+      const notification = req.body;
+
+      // Verify signature
+      const isValid = verifyNotificationSignature(
+        notification.order_id,
+        notification.status_code,
+        notification.gross_amount,
+        notification.signature_key
+      );
+
+      if (!isValid) {
+        console.warn("[Midtrans Webhook] Invalid signature for order:", notification.order_id);
+        return res.status(401).json({ message: "Invalid signature" });
+      }
+
+      // Find transaction by order ID (midtransOrderId)
+      const localTransaction = await storage.getPaymentTransactionByMidtransOrderId(notification.order_id);
+      
+      if (!localTransaction) {
+        console.warn("[Midtrans Webhook] Transaction not found:", notification.order_id);
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      const updatedData: any = {
+        midtransTransactionId: notification.transaction_id,
+        midtransPaymentType: notification.payment_type,
+        midtransTransactionTime: notification.transaction_time,
+        midtransTransactionStatus: notification.transaction_status,
+      };
+
+      // Check if payment is successful
+      if (isTransactionSuccessful(notification)) {
+        updatedData.status = "paid";
+        updatedData.paidAt = new Date();
+        if (localTransaction.referralCode) {
+          updatedData.referralCommissionStatus = "approved";
+        }
+
+        // Create subscription when payment is successful
+        const existingSubscription = await storage.getActiveSubscription(localTransaction.userId);
+        if (!existingSubscription) {
+          await storage.createSubscription(
+            localTransaction.userId, 
+            localTransaction.planId, 
+            localTransaction.id.toString()
+          );
+          console.log("[Midtrans Webhook] Subscription created for user:", localTransaction.userId);
+        } else {
+          console.log("[Midtrans Webhook] User already has active subscription");
+        }
+
+        console.log("[Midtrans Webhook] Payment SUCCESS for:", notification.order_id);
+      } else if (isTransactionPending(notification)) {
+        updatedData.status = "pending";
+        console.log("[Midtrans Webhook] Payment PENDING for:", notification.order_id);
+      } else if (isTransactionFailed(notification)) {
+        updatedData.status = "failed";
+        console.log("[Midtrans Webhook] Payment FAILED for:", notification.order_id);
+      }
+
+      // Update transaction in database
+      await storage.updatePaymentTransaction(localTransaction.id, updatedData);
+
+      // Respond 200 to acknowledge
+      res.status(200).json({ message: "OK" });
+    } catch (error: any) {
+      console.error("Error processing Midtrans webhook:", error);
       res.status(500).json({ message: error.message || "Webhook processing failed" });
     }
   });

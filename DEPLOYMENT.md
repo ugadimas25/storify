@@ -96,6 +96,10 @@ PORT=5001
 # Database
 DATABASE_URL=postgresql://storify_user:password_aman_anda@localhost:5432/storify_db
 
+# Google OAuth (dari Google Cloud Console)
+# WAJIB: Prefix VITE_ diperlukan untuk frontend
+VITE_GOOGLE_CLIENT_ID=410832331375-xxxxxxxxxxxxx.apps.googleusercontent.com
+
 # DOKU (Production Keys dari dashboard.doku.com)
 DOKU_CLIENT_ID=MCH-xxxx-xxxx-xxxx
 DOKU_SECRET_KEY=SK-xxxx-xxxx-xxxx
@@ -124,6 +128,13 @@ npm run build
 # Verify build berhasil
 ls -la dist/index.cjs
 ls -la dist/public/
+```
+
+**PENTING:** Jika menambahkan `VITE_*` environment variables setelah build, harus rebuild ulang:
+```bash
+# Setelah update .env dengan VITE_GOOGLE_CLIENT_ID
+npm run build
+systemctl restart storify
 ```
 
 ---
@@ -268,8 +279,9 @@ Buat script update di `/var/www/storify/deploy.sh`:
 ```bash
 #!/bin/bash
 cd /var/www/storify
-
-echo "📥 Pulling latest code..."
+ (manual SQL recommended)..."
+# npm run db:push  # HATI-HATI: Bisa data loss di production!
+# Gunakan manual SQL migration untuk safetyg latest code..."
 git pull origin main
 
 echo "📦 Installing dependencies..."
@@ -406,6 +418,32 @@ free -h
 ```
 
 ---
+� Setup Google OAuth di Production
+
+### 1. Update Google Cloud Console
+Tambahkan production domain ke **Authorized JavaScript origins**:
+- `https://storify.asia`
+- `https://www.storify.asia`
+
+### 2. Update .env di Server
+```bash
+ssh root@<IP_SERVER>
+cd /var/www/storify
+nano .env
+```
+
+Tambahkan:
+```env
+VITE_GOOGLE_CLIENT_ID=410832331375-xxxxxxxxxxxxx.apps.googleusercontent.com
+```
+
+### 3. Rebuild & Restart
+```bash
+npm run build
+systemctl restart storify
+```
+
+---
 
 ## 🔒 Security Checklist
 
@@ -413,6 +451,9 @@ free -h
 - [ ] Hanya port 22, 80, 443 terbuka
 - [ ] SSL certificate valid
 - [ ] Database password kuat
+- [ ] Environment variables aman (tidak di-commit ke git)
+- [ ] Google OAuth Client ID configured
+- [ ] Production domain added to Google Console
 - [ ] Environment variables aman (tidak di-commit ke git)
 - [ ] Webhook token aman
 - [ ] Session secret random dan panjang
