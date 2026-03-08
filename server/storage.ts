@@ -5,7 +5,7 @@ import {
   type Book, type InsertBook, type Favorite, type PlaybackProgress,
   type SubscriptionPlan, type Subscription, type ListeningHistory, type PaymentTransaction
 } from "@shared/schema";
-import { eq, and, desc, like, notLike, sql, gte, or, isNull } from "drizzle-orm";
+import { eq, and, desc, like, ilike, notLike, sql, gte, or, isNull } from "drizzle-orm";
 import { generateCoverUrl, generateAudioUrl, generatePdfUrl } from "./cos";
 
 // Listening limits
@@ -111,11 +111,12 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
 
     if (params?.search) {
-      // Search in both titleFix and title
+      // Search in both titleFix and title, case-insensitive
       const searchPattern = `%${params.search}%`;
       conditions.push(or(
-        like(books.titleFix, searchPattern),
-        like(books.title, searchPattern)
+        ilike(books.titleFix, searchPattern),
+        ilike(books.title, searchPattern),
+        ilike(books.author, searchPattern)
       ));
     }
     if (params?.category) {

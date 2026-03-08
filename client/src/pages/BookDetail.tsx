@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { PDFReader } from "@/components/PDFReader";
 import { ChapterAudioPlayer } from "@/components/ChapterAudioPlayer";
 import { useState } from "react";
+import { useTranslation } from "@/hooks/use-i18n";
 
 export default function BookDetail() {
   const [, params] = useRoute("/book/:id");
@@ -24,6 +25,7 @@ export default function BookDetail() {
   
   const { data: favoriteStatus } = useIsFavorite(id);
   const toggleFavorite = useToggleFavorite();
+  const { t } = useTranslation();
 
   const isCurrent = currentBook?.id === book?.id;
   const isPlayingCurrent = isCurrent && isPlaying;
@@ -44,7 +46,7 @@ export default function BookDetail() {
     );
   }
 
-  if (!book) return <div className="p-8 text-center">Book not found</div>;
+  if (!book) return <div className="p-8 text-center">{t("book.notFound")}</div>;
 
   return (
     <div className="min-h-screen bg-background pb-32">

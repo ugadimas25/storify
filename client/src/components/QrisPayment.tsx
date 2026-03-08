@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   useQrisPlans,
   useCreateQrisPayment,
@@ -24,6 +25,7 @@ interface QrisPaymentProps {
 
 export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { data: plans, isLoading: plansLoading } = useQrisPlans();
   const { data: activeSubscription } = useQrisActiveSubscription();
   const { data: listeningStatus } = useListeningStatus();
@@ -136,7 +138,7 @@ export function QrisPayment({ onSuccess, onClose }: QrisPaymentProps) {
   // Handle plan selection and QRIS payment creation
   const handleSelectPlan = async (planId: number) => {
     if (!user) {
-      alert("Silakan login terlebih dahulu untuk berlangganan");
+      setLocation("/auth/signin");
       return;
     }
 

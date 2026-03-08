@@ -5,9 +5,11 @@ import { useActiveSubscription, useListeningStatus } from "@/hooks/use-subscript
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Music, Headphones, Clock, CheckCircle, AlertCircle, QrCode, CreditCard, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Crown, Music, Headphones, Clock, CheckCircle, AlertCircle, QrCode, CreditCard, AlertTriangle, LogIn, UserPlus, Lock } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-i18n";
 
 type PaymentTab = "qris" | "doku";
 
@@ -17,6 +19,7 @@ export default function Subscription() {
   const { data: activeSubscription } = useActiveSubscription();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<PaymentTab>("qris");
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -26,9 +29,9 @@ export default function Subscription() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full">
             <Crown className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold">Storify Premium</h1>
+          <h1 className="text-4xl font-bold">{t("sub.title")}</h1>
           <p className="text-lg text-muted-foreground max-w-md mx-auto">
-            Nikmati akses tanpa batas ke ratusan audiobook berkualitas
+            {t("sub.subtitle")}
           </p>
         </div>
 
@@ -37,22 +40,22 @@ export default function Subscription() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Headphones className="w-5 h-5" />
-              Status Akses Anda
+              {t("sub.status")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {listeningStatus && (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <span className="text-sm text-muted-foreground">{t("sub.statusLabel")}</span>
                   <Badge variant={listeningStatus.hasSubscription ? "default" : "secondary"}>
-                    {listeningStatus.hasSubscription ? "Premium" : user ? "Free" : "Guest"}
+                    {listeningStatus.hasSubscription ? t("sub.premium") : user ? t("sub.free") : t("sub.guest")}
                   </Badge>
                 </div>
                 
                 {!listeningStatus.hasSubscription && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Buku Didengarkan:</span>
+                    <span className="text-sm text-muted-foreground">{t("sub.booksListened")}</span>
                     <span className="font-medium">
                       {listeningStatus.listenCount} / {listeningStatus.limit ?? "∞"}
                     </span>
@@ -61,7 +64,7 @@ export default function Subscription() {
 
                 {listeningStatus.hasSubscription && listeningStatus.subscriptionEndsAt && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Berlaku Sampai:</span>
+                    <span className="text-sm text-muted-foreground">{t("sub.validUntil")}</span>
                     <span className="font-medium">
                       {new Date(listeningStatus.subscriptionEndsAt).toLocaleDateString("id-ID", {
                         day: "numeric",
@@ -88,9 +91,9 @@ export default function Subscription() {
           <Card>
             <CardContent className="pt-6 text-center">
               <Music className="w-8 h-8 mx-auto text-primary mb-2" />
-              <h3 className="font-semibold">Unlimited Audiobook</h3>
+              <h3 className="font-semibold">{t("sub.unlimitedAudiobook")}</h3>
               <p className="text-sm text-muted-foreground">
-                Akses semua koleksi tanpa batasan
+                {t("sub.unlimitedDesc")}
               </p>
             </CardContent>
           </Card>
@@ -98,9 +101,9 @@ export default function Subscription() {
           <Card>
             <CardContent className="pt-6 text-center">
               <Clock className="w-8 h-8 mx-auto text-primary mb-2" />
-              <h3 className="font-semibold">Continue Listening</h3>
+              <h3 className="font-semibold">{t("sub.continueListen")}</h3>
               <p className="text-sm text-muted-foreground">
-                Lanjutkan dari posisi terakhir
+                {t("sub.continueDesc")}
               </p>
             </CardContent>
           </Card>
@@ -108,15 +111,47 @@ export default function Subscription() {
           <Card>
             <CardContent className="pt-6 text-center">
               <CheckCircle className="w-8 h-8 mx-auto text-primary mb-2" />
-              <h3 className="font-semibold">Semua Kategori</h3>
+              <h3 className="font-semibold">{t("sub.allCategories")}</h3>
               <p className="text-sm text-muted-foreground">
-                Akses lengkap semua genre
+                {t("sub.allCategoriesDesc")}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Payment Method Tabs */}
+        {/* Payment Method Tabs — requires login */}
+        {!user ? (
+          <Card className="border-2 border-dashed border-primary/30 bg-primary/5">
+            <CardContent className="pt-8 pb-8 text-center space-y-6">
+              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <Lock className="w-8 h-8 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold">{t("sub.loginToSubscribe")}</h3>
+                <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                  {t("sub.loginToSubscribeMsg")}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  onClick={() => setLocation("/auth/signin")}
+                  className="gap-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  {t("sub.signin")}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation("/auth/signup")}
+                  className="gap-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  {t("sub.signup")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
         <div className="space-y-4">
           {/* Tab Selector */}
           <div className="flex bg-muted rounded-xl p-1.5 gap-1">
@@ -132,7 +167,7 @@ export default function Subscription() {
               <QrCode className="w-4 h-4" />
               QRIS
               <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-green-500 hover:bg-green-500">
-                Aktif
+                {t("sub.active")}
               </Badge>
             </button>
             <button
@@ -148,7 +183,7 @@ export default function Subscription() {
               DOKU
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
-                Maintenance
+                {t("sub.maintenance")}
               </Badge>
             </button>
           </div>
@@ -172,13 +207,14 @@ export default function Subscription() {
             )}
           </div>
         </div>
+        )}
 
         {/* Comparison Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Perbandingan Paket</CardTitle>
+            <CardTitle>{t("sub.comparison")}</CardTitle>
             <CardDescription>
-              Pilih paket yang sesuai dengan kebutuhanmu
+              {t("sub.comparisonDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -186,7 +222,7 @@ export default function Subscription() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-2">Fitur</th>
+                    <th className="text-left py-3 px-2">{t("sub.feature")}</th>
                     <th className="text-center py-3 px-2">Guest</th>
                     <th className="text-center py-3 px-2">Free</th>
                     <th className="text-center py-3 px-2 bg-primary/5">Premium</th>
@@ -194,11 +230,11 @@ export default function Subscription() {
                 </thead>
                 <tbody>
                   <tr className="border-b">
-                    <td className="py-3 px-2">Batas Buku</td>
-                    <td className="text-center py-3 px-2">1 buku</td>
-                    <td className="text-center py-3 px-2">3 buku</td>
+                    <td className="py-3 px-2">{t("sub.bookLimit")}</td>
+                    <td className="text-center py-3 px-2">{t("sub.1book")}</td>
+                    <td className="text-center py-3 px-2">{t("sub.3books")}</td>
                     <td className="text-center py-3 px-2 bg-primary/5 font-semibold text-primary">
-                      Unlimited
+                      {t("sub.unlimited")}
                     </td>
                   </tr>
                   <tr className="border-b">
@@ -214,13 +250,13 @@ export default function Subscription() {
                     <td className="text-center py-3 px-2 bg-primary/5">✓</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-3 px-2">Semua Kategori</td>
+                    <td className="py-3 px-2">{t("sub.allCategories")}</td>
                     <td className="text-center py-3 px-2">✓</td>
                     <td className="text-center py-3 px-2">✓</td>
                     <td className="text-center py-3 px-2 bg-primary/5">✓</td>
                   </tr>
                   <tr>
-                    <td className="py-3 px-2">Skip ±15 Detik</td>
+                    <td className="py-3 px-2">{t("sub.skipSeconds")}</td>
                     <td className="text-center py-3 px-2">✓</td>
                     <td className="text-center py-3 px-2">✓</td>
                     <td className="text-center py-3 px-2 bg-primary/5">✓</td>
@@ -234,32 +270,31 @@ export default function Subscription() {
         {/* FAQ */}
         <Card>
           <CardHeader>
-            <CardTitle>Pertanyaan Umum</CardTitle>
+            <CardTitle>{t("sub.faq")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-medium">Bagaimana cara membayar?</h4>
+              <h4 className="font-medium">{t("sub.faq1q")}</h4>
               <p className="text-sm text-muted-foreground">
-                Pilih paket langganan, lalu scan QR Code QRIS menggunakan aplikasi e-wallet favorit Anda 
-                seperti GoPay, OVO, DANA, ShopeePay, LinkAja, atau mobile banking.
+                {t("sub.faq1a")}
               </p>
             </div>
             <div>
-              <h4 className="font-medium">Apakah pembayaran aman?</h4>
+              <h4 className="font-medium">{t("sub.faq2q")}</h4>
               <p className="text-sm text-muted-foreground">
-                Ya, semua transaksi QRIS diproses secara aman melalui sistem pembayaran yang terdaftar di Bank Indonesia.
+                {t("sub.faq2a")}
               </p>
             </div>
             <div>
-              <h4 className="font-medium">Berapa lama waktu untuk membayar?</h4>
+              <h4 className="font-medium">{t("sub.faq3q")}</h4>
               <p className="text-sm text-muted-foreground">
-                Anda memiliki waktu 60 menit setelah membuat pembayaran. Jika kedaluwarsa, Anda bisa membuat pembayaran baru.
+                {t("sub.faq3a")}
               </p>
             </div>
             <div>
-              <h4 className="font-medium">Apa yang terjadi setelah langganan habis?</h4>
+              <h4 className="font-medium">{t("sub.faq4q")}</h4>
               <p className="text-sm text-muted-foreground">
-                Akun Anda akan kembali ke mode Free dengan batasan 3 buku. Anda dapat memperbarui langganan kapan saja.
+                {t("sub.faq4a")}
               </p>
             </div>
           </CardContent>

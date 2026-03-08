@@ -1,11 +1,13 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Shield, HelpCircle } from "lucide-react";
+import { LogOut, User, Settings, Shield, HelpCircle, Globe } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Profile() {
   const { user, logout, isLoggingOut, isLoading } = useAuth();
+  const { t, locale, setLocale } = useTranslation();
 
   if (isLoading) {
     return (
@@ -23,26 +25,26 @@ export default function Profile() {
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-background">
-        <h1 className="text-2xl font-display font-bold mb-2">Welcome to Storify</h1>
-        <p className="text-muted-foreground mb-8">Sign in to sync your progress across devices.</p>
+        <h1 className="text-2xl font-display font-bold mb-2">{t("profile.welcome")}</h1>
+        <p className="text-muted-foreground mb-8">{t("profile.welcomeMsg")}</p>
         <Button asChild size="lg" className="w-full max-w-xs">
-          <a href="/api/login">Sign In / Sign Up</a>
+          <a href="/api/login">{t("profile.signinSignup")}</a>
         </Button>
       </div>
     );
   }
 
   const menuItems = [
-    { icon: Settings, label: "Account Settings" },
-    { icon: Shield, label: "Privacy & Security" },
-    { icon: HelpCircle, label: "Help & Support" },
+    { icon: Settings, label: t("profile.accountSettings") },
+    { icon: Shield, label: t("profile.privacy") },
+    { icon: HelpCircle, label: t("profile.help") },
   ];
 
   return (
     <div className="min-h-screen bg-background pb-32">
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-6 lg:px-8 py-4 lg:py-6 border-b border-border/50">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold">Profile</h1>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold">{t("profile.title")}</h1>
         </div>
       </div>
 
@@ -69,6 +71,21 @@ export default function Profile() {
             </Button>
           ))}
 
+          {/* Language Toggle */}
+          <Button
+            variant="outline"
+            className="w-full justify-between h-14 md:h-16 text-base md:text-lg font-normal rounded-xl bg-card hover:bg-muted/50 border-border/50 transition-all hover:scale-[1.01] hover:shadow-sm"
+            onClick={() => setLocale(locale === "id" ? "en" : "id")}
+          >
+            <span className="flex items-center">
+              <Globe className="w-5 h-5 md:w-6 md:h-6 mr-3 text-muted-foreground" />
+              {t("profile.language")}
+            </span>
+            <span className="text-sm font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full">
+              {locale === "id" ? "ID 🇮🇩" : "EN 🇬🇧"}
+            </span>
+          </Button>
+
           <div className="pt-8">
             <Button 
               variant="destructive" 
@@ -77,7 +94,7 @@ export default function Profile() {
               disabled={isLoggingOut}
             >
               <LogOut className="w-5 h-5 md:w-6 md:h-6 mr-2" />
-              {isLoggingOut ? "Signing out..." : "Sign Out"}
+              {isLoggingOut ? t("profile.signingOut") : t("profile.signout")}
             </Button>
           </div>
         </div>

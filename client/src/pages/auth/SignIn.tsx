@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, RefreshCw } from "lucide-react";
+import { useTranslation } from "@/hooks/use-i18n";
 
 export default function SignIn() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -48,8 +50,8 @@ export default function SignIn() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
       toast({
-        title: "Berhasil!",
-        description: "Anda telah berhasil masuk.",
+        title: t("toast.success"),
+        description: t("toast.signedIn"),
       });
 
       setLocation("/");
@@ -74,14 +76,14 @@ export default function SignIn() {
       });
       const data = await response.json();
       toast({
-        title: "Berhasil",
+        title: t("toast.success"),
         description: data.message,
       });
     } catch {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Gagal mengirim ulang email verifikasi",
+        description: t("toast.resendFailed"),
       });
     } finally {
       setResending(false);
@@ -115,8 +117,8 @@ export default function SignIn() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
       toast({
-        title: "Berhasil!",
-        description: `Selamat datang${data.user.name ? ", " + data.user.name : ""}!`,
+        title: t("toast.success"),
+        description: `${t("toast.welcome")}${data.user.name ? ", " + data.user.name : ""}!`,
       });
 
       setTimeout(() => {
@@ -125,8 +127,8 @@ export default function SignIn() {
     } catch (error: any) {
       console.error("Google login error:", error);
       toast({
-        title: "Login Gagal",
-        description: error.message || "Gagal masuk dengan Google",
+      title: t("toast.loginFailed"),
+      description: error.message || t("toast.googleFailed"),
         variant: "destructive",
       });
     } finally {
@@ -137,8 +139,8 @@ export default function SignIn() {
   const handleGoogleError = () => {
     console.error("Google login failed");
     toast({
-      title: "Login Gagal",
-      description: "Gagal masuk dengan Google. Silakan coba lagi.",
+      title: t("toast.loginFailed"),
+      description: t("toast.googleFailed"),
       variant: "destructive",
     });
   };
@@ -147,28 +149,28 @@ export default function SignIn() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#a1dab4]/20 via-white to-[#41b6c4]/10 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Masuk</CardTitle>
-          <CardDescription>Masuk ke akun Storify Insights Anda</CardDescription>
+          <CardTitle>{t("auth.signIn")}</CardTitle>
+          <CardDescription>{t("auth.signInDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {requiresVerification && (
             <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
                 <Mail className="w-5 h-5 text-amber-600" />
-                <p className="text-sm font-medium text-amber-800">Email belum diverifikasi</p>
+                <p className="text-sm font-medium text-amber-800">{t("auth.emailNotVerified")}</p>
               </div>
               <p className="text-xs text-amber-700 mb-3">
-                Silakan cek email Anda dan klik link verifikasi terlebih dahulu.
+                {t("auth.checkEmailVerify")}
               </p>
               <Button size="sm" variant="outline" onClick={handleResend} disabled={resending} className="w-full">
                 <RefreshCw className={`w-3 h-3 mr-1 ${resending ? "animate-spin" : ""}`} />
-                {resending ? "Mengirim..." : "Kirim Ulang Email Verifikasi"}
+                {resending ? t("auth.sending") : t("auth.resendVerification")}
               </Button>
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -179,7 +181,7 @@ export default function SignIn() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -190,7 +192,7 @@ export default function SignIn() {
               />
             </div>
             <Button type="submit" className="w-full bg-gradient-to-r from-[#253494] to-[#2c7fb8] hover:from-[#253494]/90 hover:to-[#2c7fb8]/90" disabled={isLoading}>
-              {isLoading ? "Memproses..." : "Masuk"}
+              {isLoading ? t("auth.processing") : t("auth.signIn")}
             </Button>
           </form>
 
@@ -201,7 +203,7 @@ export default function SignIn() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-card px-2 text-muted-foreground">
-                Atau masuk dengan
+                {t("auth.orSignInWith")}
               </span>
             </div>
           </div>
@@ -221,15 +223,15 @@ export default function SignIn() {
               />
             ) : (
               <p className="text-xs text-muted-foreground text-center">
-                Google Login belum dikonfigurasi
+                {t("auth.googleNotConfigured")}
               </p>
             )}
           </div>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Belum punya akun?{" "}
+            {t("auth.noAccount")}{" "}
             <Link href="/auth/signup" className="text-primary hover:underline font-medium">
-              Daftar
+              {t("auth.register")}
             </Link>
           </p>
         </CardContent>

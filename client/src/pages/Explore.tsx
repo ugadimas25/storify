@@ -8,11 +8,13 @@ import { Search, X, Filter, LayoutGrid, List } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "@/hooks/use-i18n";
 
 export default function Explore() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const { t } = useTranslation();
   
   // Fetch categories from database
   const { data: categories = [], isLoading: loadingCategories } = useQuery<string[]>({
@@ -36,7 +38,7 @@ export default function Explore() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
           {/* Title and View Toggle */}
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl md:text-3xl font-display font-bold">Explore</h1>
+            <h1 className="text-2xl md:text-3xl font-display font-bold">{t("explore.title")}</h1>
             
             {/* Desktop View Toggle */}
             <div className="hidden md:flex items-center gap-2 bg-secondary/50 rounded-lg p-1">
@@ -61,7 +63,7 @@ export default function Explore() {
             <Input 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Title, author, or keyword..." 
+              placeholder={t("explore.search")} 
               className="pl-12 h-12 md:h-14 rounded-xl md:rounded-2xl bg-secondary/50 border-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:bg-background transition-all text-base md:text-lg"
             />
             {search && (
@@ -84,7 +86,7 @@ export default function Explore() {
                   : "bg-secondary/50 text-foreground hover:bg-secondary hover:shadow-sm"
               }`}
             >
-              All
+              {t("explore.all")}
             </button>
             {loadingCategories ? (
               // Loading skeleton for categories
@@ -135,8 +137,8 @@ export default function Explore() {
                   <div className="w-20 h-20 mx-auto bg-muted rounded-full flex items-center justify-center">
                     <Search className="w-8 h-8 text-muted-foreground/50" />
                   </div>
-                  <p className="text-lg font-medium">No books found</p>
-                  <p className="text-sm">Try adjusting your search or filter criteria.</p>
+                  <p className="text-lg font-medium">{t("explore.noBooks")}</p>
+                  <p className="text-sm">{t("explore.noBooks.sub")}</p>
                 </div>
               </motion.div>
             ) : viewMode === "grid" ? (
@@ -182,9 +184,9 @@ export default function Explore() {
         {/* Results count */}
         {!isLoading && books && books.length > 0 && (
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            Showing {books.length} book{books.length !== 1 ? 's' : ''}
-            {selectedCategory && ` in ${selectedCategory}`}
-            {search && ` matching "${search}"`}
+            {t("explore.showing")} {books.length} {books.length !== 1 ? t("explore.books") : t("explore.book")}
+            {selectedCategory && ` ${t("explore.in")} ${selectedCategory}`}
+            {search && ` ${t("explore.matching")} "${search}"`}
           </div>
         )}
       </main>

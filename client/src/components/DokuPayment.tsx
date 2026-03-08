@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { 
   useSubscriptionPlans, 
   useCreatePayment, 
@@ -33,6 +34,7 @@ interface DokuPaymentProps {
 
 export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { data: plans, isLoading: plansLoading } = useSubscriptionPlans();
   const { data: activeSubscription } = useActiveSubscription();
   const { data: listeningStatus } = useListeningStatus();
@@ -113,7 +115,7 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
   // Handle plan selection and payment creation
   const handleSelectPlan = async (planId: number) => {
     if (!user) {
-      alert("Silakan login terlebih dahulu untuk berlangganan");
+      setLocation("/auth/signin");
       return;
     }
 

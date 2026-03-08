@@ -1,16 +1,18 @@
 import { Link, useLocation } from "wouter";
 import { Home, Compass, Heart, User, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-i18n";
 
 export function BottomNav() {
   const [location] = useLocation();
+  const { t } = useTranslation();
 
   const navItems = [
-    { icon: Home, label: "Home", href: "/" },
-    { icon: Compass, label: "Explore", href: "/explore" },
-    { icon: Crown, label: "Premium", href: "/subscription" },
-    { icon: Heart, label: "Favorites", href: "/favorites" },
-    { icon: User, label: "Profile", href: "/profile" },
+    { icon: Home, label: t("nav.home"), href: "/" },
+    { icon: Compass, label: t("nav.explore"), href: "/explore" },
+    { icon: Crown, label: t("nav.premium"), href: "/subscription" },
+    { icon: Heart, label: t("nav.favorites"), href: "/favorites" },
+    { icon: User, label: t("nav.profile"), href: "/profile" },
   ];
 
   return (

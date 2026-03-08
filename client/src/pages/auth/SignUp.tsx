@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, ArrowRight, RefreshCw } from "lucide-react";
+import { useTranslation } from "@/hooks/use-i18n";
 
 export default function SignUp() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -79,14 +81,14 @@ export default function SignUp() {
       });
       const data = await response.json();
       toast({
-        title: "Berhasil",
+        title: t("toast.success"),
         description: data.message,
       });
     } catch {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Gagal mengirim ulang email verifikasi",
+        description: t("toast.resendFailed"),
       });
     } finally {
       setResending(false);
@@ -102,24 +104,23 @@ export default function SignUp() {
             <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-3">
               <Mail className="w-8 h-8 text-[#2c7fb8]" />
             </div>
-            <CardTitle className="text-xl">Cek Email Anda</CardTitle>
+            <CardTitle className="text-xl">{t("auth.checkEmail")}</CardTitle>
             <CardDescription className="text-sm leading-relaxed">
-              Kami telah mengirim link verifikasi ke<br />
+              {t("auth.verificationSent")}<br />
               <span className="font-semibold text-foreground">{email}</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-xs text-muted-foreground">
-              Klik link di email untuk mengaktifkan akun Anda.
-              Cek juga folder spam jika tidak menemukan email.
+              {t("auth.clickToActivate")}
             </p>
             <div className="flex flex-col gap-2">
               <Button variant="outline" onClick={handleResend} disabled={resending} className="w-full">
                 <RefreshCw className={`w-4 h-4 mr-2 ${resending ? "animate-spin" : ""}`} />
-                {resending ? "Mengirim..." : "Kirim Ulang Email"}
+                {resending ? t("auth.sending") : t("auth.resendEmail")}
               </Button>
               <Button onClick={() => setLocation("/auth/signin")} className="w-full">
-                Ke Halaman Login
+                {t("auth.goToLogin")}
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
@@ -133,13 +134,13 @@ export default function SignUp() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#a1dab4]/20 via-white to-[#41b6c4]/10 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Daftar Akun</CardTitle>
-          <CardDescription>Buat akun Storify Insights Anda</CardDescription>
+          <CardTitle>{t("auth.signUp")}</CardTitle>
+          <CardDescription>{t("auth.signUpDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nama Lengkap</Label>
+              <Label htmlFor="name">{t("auth.fullName")}</Label>
               <Input
                 id="name"
                 type="text"
@@ -150,7 +151,7 @@ export default function SignUp() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("auth.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -161,7 +162,7 @@ export default function SignUp() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -173,7 +174,7 @@ export default function SignUp() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
+              <Label htmlFor="confirmPassword">{t("auth.confirmPassword")}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -185,13 +186,13 @@ export default function SignUp() {
               />
             </div>
             <Button type="submit" className="w-full bg-gradient-to-r from-[#253494] to-[#2c7fb8] hover:from-[#253494]/90 hover:to-[#2c7fb8]/90" disabled={isLoading}>
-              {isLoading ? "Membuat akun..." : "Daftar"}
+              {isLoading ? t("auth.creating") : t("auth.register")}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Sudah punya akun?{" "}
+            {t("auth.hasAccount")}{" "}
             <Link href="/auth/signin" className="text-primary hover:underline font-medium">
-              Masuk
+              {t("auth.signInLink")}
             </Link>
           </p>
         </CardContent>

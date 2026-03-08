@@ -6,10 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BookMarked, Lock } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { useTranslation } from "@/hooks/use-i18n";
 
 export default function Favorites() {
   const { user, isLoading: authLoading } = useAuth();
   const { data: favorites, isLoading: favLoading } = useFavorites();
+  const { t } = useTranslation();
 
   if (authLoading) return null;
 
@@ -19,12 +21,12 @@ export default function Favorites() {
         <div className="w-16 h-16 bg-secondary/50 rounded-full flex items-center justify-center mb-6">
           <Lock className="w-8 h-8 text-primary" />
         </div>
-        <h1 className="text-2xl font-display font-bold mb-2">Login Required</h1>
+        <h1 className="text-2xl font-display font-bold mb-2">{t("favorites.loginRequired")}</h1>
         <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
-          Sign in to access your library of saved summaries and continue listening where you left off.
+          {t("favorites.loginMsg")}
         </p>
         <Button asChild size="lg" className="w-full max-w-xs">
-          <a href="/api/login">Sign In</a>
+          <a href="/api/login">{t("favorites.signin")}</a>
         </Button>
       </div>
     );
@@ -34,8 +36,8 @@ export default function Favorites() {
     <div className="min-h-screen bg-background pb-32">
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-6 lg:px-8 py-4 lg:py-6 border-b border-border/50">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold">My Library</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">Your saved books and favorites</p>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-display font-bold">{t("favorites.title")}</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">{t("favorites.subtitle")}</p>
         </div>
       </div>
 
@@ -51,10 +53,10 @@ export default function Favorites() {
             <div className="w-16 h-16 md:w-20 md:h-20 bg-secondary/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <BookMarked className="w-8 h-8 md:w-10 md:h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-lg md:text-xl font-bold mb-2">No favorites yet</h3>
-            <p className="text-muted-foreground text-sm md:text-base mb-6 max-w-md mx-auto">Start exploring to build your library.</p>
+            <h3 className="text-lg md:text-xl font-bold mb-2">{t("favorites.noFavorites")}</h3>
+            <p className="text-muted-foreground text-sm md:text-base mb-6 max-w-md mx-auto">{t("favorites.noFavorites.sub")}</p>
             <Link href="/explore">
-              <Button variant="outline" size="lg">Explore Books</Button>
+              <Button variant="outline" size="lg">{t("favorites.exploreBooks")}</Button>
             </Link>
           </div>
         ) : (

@@ -11,11 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Crown, Music, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/hooks/use-i18n";
 
 export function ListeningLimitModal() {
   const { listeningError, clearListeningError } = useAudio();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   const handleSubscribe = () => {
     clearListeningError();
@@ -37,7 +39,7 @@ export function ListeningLimitModal() {
             <Music className="w-8 h-8 text-orange-600" />
           </div>
           <DialogTitle className="text-center text-xl">
-            Batas Mendengarkan Tercapai
+            {t("limit.title")}
           </DialogTitle>
           <DialogDescription className="text-center">
             {listeningError}
@@ -48,27 +50,27 @@ export function ListeningLimitModal() {
           {!user ? (
             <>
               <p className="text-sm text-muted-foreground text-center">
-                Login untuk mendapatkan akses lebih banyak audiobook, atau berlangganan untuk akses unlimited!
+                {t("limit.loginMsg")}
               </p>
               <div className="grid gap-3">
                 <Button onClick={handleLogin} variant="outline" className="w-full">
                   <User className="w-4 h-4 mr-2" />
-                  Login (3 Buku Gratis)
+                  {t("limit.loginBtn")}
                 </Button>
                 <Button onClick={handleSubscribe} className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
                   <Crown className="w-4 h-4 mr-2" />
-                  Berlangganan Premium
+                  {t("limit.subscribeBtn")}
                 </Button>
               </div>
             </>
           ) : (
             <>
               <p className="text-sm text-muted-foreground text-center">
-                Upgrade ke Premium untuk menikmati unlimited audiobook tanpa batasan!
+                {t("limit.upgradeMsg")}
               </p>
               <Button onClick={handleSubscribe} className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
                 <Crown className="w-4 h-4 mr-2" />
-                Berlangganan Premium
+                {t("limit.subscribeBtn")}
               </Button>
             </>
           )}
@@ -76,7 +78,7 @@ export function ListeningLimitModal() {
 
         <DialogFooter className="sm:justify-center">
           <Button variant="ghost" onClick={clearListeningError}>
-            Nanti saja
+            {t("limit.later")}
           </Button>
         </DialogFooter>
       </DialogContent>

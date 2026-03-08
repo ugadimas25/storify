@@ -9,6 +9,7 @@ import { Link, useLocation } from "wouter";
 import { Search, Play, ChevronLeft, ChevronRight, Headphones, BookOpen, Sparkles, ArrowRight, Clock } from "lucide-react";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "@/hooks/use-i18n";
 import { useQuery } from "@tanstack/react-query";
 import { Book } from "@shared/schema";
 
@@ -61,11 +62,13 @@ export default function Home() {
     setTimeout(() => updateScrollState(el), 350);
   };
 
+  const { t, locale, setLocale } = useTranslation();
+
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Selamat pagi";
-    if (hour < 18) return "Selamat siang";
-    return "Selamat malam";
+    if (hour < 12) return t("home.greeting.morning");
+    if (hour < 18) return t("home.greeting.afternoon");
+    return t("home.greeting.evening");
   };
 
   const [, setLocation] = useLocation();
@@ -96,24 +99,32 @@ export default function Home() {
                     {user.firstName || 'Reader'}
                   </h1>
                 </div>
-                <button
-                  onClick={() => setLocation("/explore")}
-                  className="w-10 h-10 md:w-12 md:h-12 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/25 transition-colors"
-                >
-                  <Search className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setLocale(locale === "id" ? "en" : "id")}
+                    className="w-10 h-10 md:w-12 md:h-12 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/25 transition-colors text-xs md:text-sm font-bold text-white"
+                  >
+                    {locale === "id" ? "EN" : "ID"}
+                  </button>
+                  <button
+                    onClick={() => setLocation("/explore")}
+                    className="w-10 h-10 md:w-12 md:h-12 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/25 transition-colors"
+                  >
+                    <Search className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  </button>
+                </div>
               </div>
 
               {/* Quick stats bar - larger on desktop */}
               <div className="flex gap-3 md:gap-4 lg:gap-6 mt-4 lg:mt-6">
                 <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 md:p-4 lg:p-5 text-center hover:bg-white/20 transition-colors">
                   <Headphones className="w-5 h-5 md:w-6 md:h-6 text-white/80 mx-auto mb-1" />
-                  <p className="text-xs md:text-sm text-white/60">Listening</p>
+                  <p className="text-xs md:text-sm text-white/60">{t("home.stats.listening")}</p>
                   <p className="text-lg md:text-xl lg:text-2xl font-bold text-white">{recentlyPlayed?.length || 0}</p>
                 </div>
                 <div className="flex-1 bg-white/15 backdrop-blur-sm rounded-2xl p-3 md:p-4 lg:p-5 text-center hover:bg-white/20 transition-colors">
                   <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-white/80 mx-auto mb-1" />
-                  <p className="text-xs md:text-sm text-white/60">Library</p>
+                  <p className="text-xs md:text-sm text-white/60">{t("home.stats.library")}</p>
                   <p className="text-lg md:text-xl lg:text-2xl font-bold text-white">{allBooks?.length || 0}</p>
                 </div>
                 <div
@@ -121,7 +132,7 @@ export default function Home() {
                   onClick={() => setLocation("/explore")}
                 >
                   <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-[#ffffcc] mx-auto mb-1" />
-                  <p className="text-xs md:text-sm text-white/60">Explore</p>
+                  <p className="text-xs md:text-sm text-white/60">{t("home.stats.explore")}</p>
                   <p className="text-lg md:text-xl lg:text-2xl font-bold text-white">
                     <ArrowRight className="w-5 h-5 md:w-6 md:h-6 mx-auto" />
                   </p>
@@ -136,20 +147,29 @@ export default function Home() {
               className="text-center space-y-5 lg:space-y-8 lg:py-8"
             >
               {/* Logo / Brand */}
-              <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 md:px-5 md:py-2 mx-auto">
-                <Headphones className="w-4 h-4 md:w-5 md:h-5 text-[#ffffcc]" />
-                <span className="text-sm md:text-base font-semibold text-white">Storify Insights</span>
+              <div className="flex items-center justify-between">
+                <div />
+                <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-4 py-1.5 md:px-5 md:py-2">
+                  <Headphones className="w-4 h-4 md:w-5 md:h-5 text-[#ffffcc]" />
+                  <span className="text-sm md:text-base font-semibold text-white">{t("home.brand")}</span>
+                </div>
+                <button
+                  onClick={() => setLocale(locale === "id" ? "en" : "id")}
+                  className="w-10 h-10 md:w-12 md:h-12 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/25 transition-colors text-xs md:text-sm font-bold text-white"
+                >
+                  {locale === "id" ? "EN" : "ID"}
+                </button>
               </div>
 
               <div className="space-y-3 lg:space-y-4">
                 <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
-                  Dengarkan Ringkasan<br />
+                  {t("home.hero.title1")}<br />
                   <span className="bg-gradient-to-r from-[#ffffcc] to-[#a1dab4] bg-clip-text text-transparent">
-                    Buku Terbaik
+                    {t("home.hero.title2")}
                   </span>
                 </h1>
                 <p className="text-white/70 text-sm md:text-base lg:text-lg max-w-xs md:max-w-md lg:max-w-xl mx-auto leading-relaxed">
-                  Akses ratusan ringkasan audiobook kapan saja, di mana saja. Belajar lebih cepat, lebih cerdas.
+                  {t("home.hero.subtitle")}
                 </p>
               </div>
 
@@ -160,14 +180,14 @@ export default function Home() {
                   variant="outline"
                   className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white rounded-xl px-6 md:px-8 backdrop-blur-sm md:text-base lg:text-lg"
                 >
-                  Masuk
+                  {t("home.hero.signin")}
                 </Button>
                 <Button
                   size="lg"
                   onClick={() => setLocation("/auth/signup")}
                   className="bg-[#ffffcc] text-[#253494] hover:bg-[#ffffcc]/90 rounded-xl px-6 md:px-8 font-semibold shadow-lg shadow-black/10 md:text-base lg:text-lg"
                 >
-                  Daftar Gratis
+                  {t("home.hero.signup")}
                   <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-1" />
                 </Button>
               </div>
@@ -181,7 +201,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs md:text-sm text-white/60 ml-1">Bergabung dengan 1000+ pembaca</p>
+                <p className="text-xs md:text-sm text-white/60 ml-1">{t("home.hero.trust")}</p>
               </div>
             </motion.div>
           )}
@@ -201,8 +221,8 @@ export default function Home() {
           <section className="max-w-7xl mx-auto">
             <div className="px-4 sm:px-6 lg:px-8 mb-4 flex justify-between items-end">
               <div>
-                <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">Continue Listening</h2>
-                <p className="text-xs md:text-sm text-muted-foreground">Pick up where you left off</p>
+                <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">{t("home.continue")}</h2>
+                <p className="text-xs md:text-sm text-muted-foreground">{t("home.continue.sub")}</p>
               </div>
             </div>
             
@@ -249,7 +269,7 @@ export default function Home() {
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-[10px] md:text-xs text-muted-foreground">
-                              {Math.round(book.progress)}% completed
+                              {Math.round(book.progress)}% {t("home.completed")}
                             </span>
                             <span className="text-[10px] md:text-xs text-muted-foreground flex items-center gap-1">
                               <Clock className="w-3 h-3" />
@@ -269,7 +289,7 @@ export default function Home() {
         {/* Featured Section - Netflix style horizontal slider */}
         <section className="relative group/featured">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 flex justify-between items-end">
-            <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">Featured</h2>
+            <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">{t("home.featured")}</h2>
             <div className="flex items-center gap-2 md:gap-3">
               <button
                 onClick={() => scrollFeatured("left")}
@@ -285,7 +305,7 @@ export default function Home() {
               >
                 <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
               </button>
-              <Link href="/explore" className="text-xs md:text-sm font-semibold text-primary ml-1 hover:underline">View All</Link>
+              <Link href="/explore" className="text-xs md:text-sm font-semibold text-primary ml-1 hover:underline">{t("home.viewAll")}</Link>
             </div>
           </div>
           
@@ -329,11 +349,11 @@ export default function Home() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-4 md:mb-6 flex justify-between items-end">
             <div>
-              <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">New Arrivals</h2>
-              <p className="text-xs md:text-sm text-muted-foreground">Fresh summaries just for you</p>
+              <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-display">{t("home.newArrivals")}</h2>
+              <p className="text-xs md:text-sm text-muted-foreground">{t("home.newArrivals.sub")}</p>
             </div>
             <Link href="/explore" className="text-xs md:text-sm font-semibold text-primary hover:underline">
-              See All <ArrowRight className="w-3 h-3 md:w-4 md:h-4 inline ml-1" />
+              {t("home.seeAll")} <ArrowRight className="w-3 h-3 md:w-4 md:h-4 inline ml-1" />
             </Link>
           </div>
 

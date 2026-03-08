@@ -2,8 +2,10 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/hooks/use-i18n";
 
 export default function NotFound() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md border-0 shadow-none bg-transparent">
@@ -15,16 +17,16 @@ export default function NotFound() {
           </div>
           
           <h1 className="text-3xl font-display font-bold text-foreground mb-3">
-            Page Not Found
+            {t("notFound.title")}
           </h1>
           
           <p className="text-muted-foreground mb-8 text-lg">
-            The page you're looking for doesn't exist or has been moved.
+            {t("notFound.message")}
           </p>
 
           <Link href="/">
             <Button size="lg" className="w-full rounded-xl h-12 text-base shadow-lg shadow-primary/20">
-              Return Home
+              {t("notFound.returnHome")}
             </Button>
           </Link>
         </CardContent>
