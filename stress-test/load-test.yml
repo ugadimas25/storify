@@ -1,0 +1,118 @@
+config:
+  # Target production server
+  target: "https://app.storify.asia"
+
+  # HTTP settings
+  http:
+    timeout: 30
+    pool: 50
+
+  # Phases: warmup → ramp up → sustain → spike
+  phases:
+    # Phase 1: Warmup (10 users selama 30 detik)
+    - name: "Warmup"
+      duration: 30
+      arrivalRate: 10
+
+    # Phase 2: Ramp up ke 50 user (1 menit)
+    - name: "Ramp Up"
+      duration: 60
+      arrivalRate: 10
+      rampTo: 50
+
+    # Phase 3: Sustain 100 users (2 menit)
+    - name: "Sustain 100 Users"
+      duration: 120
+      arrivalRate: 100
+
+    # Phase 4: Spike test — 200 users sekaligus (30 detik)
+    - name: "Spike Test"
+      duration: 30
+      arrivalRate: 200
+
+    # Phase 5: Cool down
+    - name: "Cool Down"
+      duration: 30
+      arrivalRate: 10
+
+  # Variables
+  variables:
+    bookId:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+
+  # Thresholds — test GAGAL jika melebihi batas ini
+  ensure:
+    p95: 3000       # 95% request harus selesai < 3 detik
+    p99: 5000       # 99% request harus selesai < 5 detik
+    maxErrorRate: 5 # Error rate < 5%
+
+  # Output report
+  plugins:
+    expect: {}
+
+scenarios:
+  # Scenario 1: Browse guest (60% traffic)
+  - name: "Guest Browse Books"
+    weight: 60
+    flow:
+      - get:
+          url: "/api/books"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+      - get:
+          url: "/api/categories"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      - get:
+          url: "/api/books/{{ bookId }}"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+      - think: 3
+
+      - get:
+          url: "/api/subscription/plans"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+  # Scenario 2: Search books (25% traffic)
+  - name: "Search Books"
+    weight: 25
+    flow:
+      - get:
+          url: "/api/books?search=harry"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+      - get:
+          url: "/api/books?search=filosofi"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+      - get:
+          url: "/api/books?search=novel"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+  # Scenario 3: Static assets (15% traffic)
+  - name: "Static Assets"
+    weight: 15
+    flow:
+      - get:
+          url: "/"
+          expect:
+            - statusCode: 200
+      - think: 1

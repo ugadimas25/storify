@@ -1,0 +1,41 @@
+config:
+  target: "https://app.storify.asia"
+  http:
+    timeout: 30
+    pool: 20
+  phases:
+    # arrivalRate 33/detik × session ~3 detik = ~100 concurrent
+    - name: "Warmup 20 Users"
+      duration: 20
+      arrivalRate: 7
+
+    - name: "Ramp to 100 Users"
+      duration: 30
+      arrivalRate: 7
+      rampTo: 33
+
+    - name: "Sustain 100 Concurrent Users"
+      duration: 60
+      arrivalRate: 33
+
+  ensure:
+    p95: 3000
+    maxErrorRate: 5
+
+scenarios:
+  - name: "Browse Books"
+    weight: 70
+    flow:
+      - get:
+          url: "/api/books"
+      - think: 2
+      - get:
+          url: "/api/books/1"
+      - think: 1
+
+  - name: "Search"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/books?search=novel"
+      - think: 2

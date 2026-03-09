@@ -81,7 +81,7 @@ export async function sendVerificationEmail(
   name: string,
   token: string
 ): Promise<boolean> {
-  const baseUrl = process.env.APP_URL || "https://storify.asia";
+  const baseUrl = process.env.APP_URL || "https://app.storify.asia";
   const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
 
   const htmlContent = `

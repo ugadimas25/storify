@@ -156,11 +156,9 @@ Domain baru perlu didaftarkan di Google Cloud Console:
    ```
    https://app.storify.asia
    ```
-6. Di bagian **Authorized redirect URIs**, tambahkan:
-   ```
-   https://app.storify.asia/api/auth/google/callback
-   ```
-7. Klik **Save**
+6. Klik **Save**
+
+> **Catatan:** Authorized redirect URIs **tidak perlu diisi** karena Storify menggunakan token flow (`@react-oauth/google`). Login diproses via `POST /api/auth/google` dengan ID Token, bukan server-side redirect.
 
 ---
 

@@ -16,6 +16,7 @@ declare module "http" {
 // CORS for Capacitor native app (capacitor:// and https://localhost origins)
 app.use(cors({
   origin: [
+    'https://app.storify.asia',
     'https://storify.asia',
     'http://localhost:5000',
     'http://localhost:5173',
