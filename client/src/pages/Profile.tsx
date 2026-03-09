@@ -28,7 +28,7 @@ export default function Profile() {
         <h1 className="text-2xl font-display font-bold mb-2">{t("profile.welcome")}</h1>
         <p className="text-muted-foreground mb-8">{t("profile.welcomeMsg")}</p>
         <Button asChild size="lg" className="w-full max-w-xs">
-          <a href="/api/login">{t("profile.signinSignup")}</a>
+          <a href="/auth/signin">{t("profile.signinSignup")}</a>
         </Button>
       </div>
     );

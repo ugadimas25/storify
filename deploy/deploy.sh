@@ -37,7 +37,7 @@ npm run db:push
 
 # Restart application
 echo "🔄 Restarting application..."
-systemctl restart storify
+pm2 reload storify
 
 # Reload nginx
 echo "🌐 Reloading nginx..."

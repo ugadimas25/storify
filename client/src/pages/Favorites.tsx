@@ -26,7 +26,7 @@ export default function Favorites() {
           {t("favorites.loginMsg")}
         </p>
         <Button asChild size="lg" className="w-full max-w-xs">
-          <a href="/api/login">{t("favorites.signin")}</a>
+          <a href="/auth/signin">{t("favorites.signin")}</a>
         </Button>
       </div>
     );
