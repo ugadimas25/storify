@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, XCircle, Crown, Music, Clock, RefreshCw, ExternalLink, AlertTriangle, Wrench } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Crown, Music, Clock, RefreshCw, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Payment methods available through DOKU Checkout
@@ -344,31 +344,8 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
   // Plan selection (idle state)
   return (
     <div className="space-y-6 relative">
-      {/* Under Maintenance Notification - Modern Style */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-800 bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/40 p-6 shadow-lg">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/20 dark:bg-amber-700/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-200/20 dark:bg-orange-700/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-        <div className="relative flex items-start gap-4">
-          <div className="flex-shrink-0 w-14 h-14 bg-amber-100 dark:bg-amber-900/50 rounded-2xl flex items-center justify-center shadow-sm">
-            <Wrench className="w-7 h-7 text-amber-600 dark:text-amber-400 animate-pulse" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-bold text-amber-900 dark:text-amber-200 text-lg">Under Maintenance</h3>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-200/80 dark:bg-amber-800/60 text-amber-800 dark:text-amber-200">
-                <AlertTriangle className="w-3 h-3" />
-                Sementara
-              </span>
-            </div>
-            <p className="text-sm text-amber-700 dark:text-amber-300/80 leading-relaxed">
-              Pembayaran melalui DOKU sedang dalam perbaikan. Silakan gunakan metode pembayaran <strong>QRIS</strong> yang tersedia di tab sebelah.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Header */}
-      <div className="text-center space-y-2 opacity-50 pointer-events-none">
+      <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">Pilih Paket Langganan</h2>
         <p className="text-muted-foreground">
           Nikmati unlimited audiobook dengan berlangganan Storify Premium
@@ -382,8 +359,8 @@ export function DokuPayment({ onSuccess, onClose }: DokuPaymentProps) {
         )}
       </div>
 
-      {/* Plans - Disabled during maintenance */}
-      <div className="grid gap-4 md:grid-cols-3 opacity-50 pointer-events-none select-none">
+      {/* Plans */}
+      <div className="grid gap-4 md:grid-cols-3">
         {plans?.map((plan) => {
           const isPopular = plan.name.toLowerCase().includes("bulanan");
           const pricePerDay = Math.round(plan.price / plan.durationDays);
