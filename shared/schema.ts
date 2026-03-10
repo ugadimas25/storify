@@ -18,6 +18,21 @@ export const activityLogs = pgTable("activity_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// System log - comprehensive user action log for admin dashboard
+export const sfSysLog = pgTable("sf_sys_log", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id"),
+  userEmail: text("user_email"),
+  userName: text("user_name"),
+  action: text("action").notNull(),
+  resourceType: text("resource_type"),
+  resourceId: text("resource_id"),
+  metadata: jsonb("metadata"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const books = pgTable("books_list", {
   id: serial("id").primaryKey(),
   title: text("title"),
@@ -152,6 +167,7 @@ export const insertListeningHistorySchema = createInsertSchema(listeningHistory)
 export const insertPaymentTransactionSchema = createInsertSchema(paymentTransactions).omit({ id: true, createdAt: true });
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({ id: true, createdAt: true });
 export const insertReferralCodeSchema = createInsertSchema(referralCodes).omit({ id: true, createdAt: true });
+export const insertSfSysLogSchema = createInsertSchema(sfSysLog).omit({ id: true, createdAt: true });
 
 export type Book = typeof books.$inferSelect;
 export type InsertBook = z.infer<typeof insertBookSchema>;
@@ -168,6 +184,8 @@ export type InsertListeningHistory = z.infer<typeof insertListeningHistorySchema
 export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
 export type ActivityLog = typeof activityLogs.$inferSelect;
+export type SfSysLog = typeof sfSysLog.$inferSelect;
+export type InsertSfSysLog = z.infer<typeof insertSfSysLogSchema>;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type ReferralCode = typeof referralCodes.$inferSelect;
 export type InsertReferralCode = z.infer<typeof insertReferralCodeSchema>;

@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Crown, Music, Headphones, Clock, CheckCircle, AlertCircle, QrCode, CreditCard, AlertTriangle, LogIn, UserPlus, Lock } from "lucide-react";
+import { Crown, Music, Headphones, Clock, CheckCircle, AlertCircle, QrCode, CreditCard, AlertTriangle, LogIn, UserPlus, Lock, Handshake } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-i18n";
@@ -296,6 +296,26 @@ export default function Subscription() {
               <p className="text-sm text-muted-foreground">
                 {t("sub.faq4a")}
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Partner CTA */}
+        <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <Handshake className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h3 className="font-semibold">Jadi Partner Storify</h3>
+                <p className="text-sm text-muted-foreground">
+                  Dapatkan komisi 10% dari setiap subscription yang menggunakan kode referral Anda
+                </p>
+              </div>
+              <Button onClick={() => setLocation("/partner")} className="gap-2 whitespace-nowrap">
+                <Handshake className="w-4 h-4" /> Gabung Sekarang
+              </Button>
             </div>
           </CardContent>
         </Card>

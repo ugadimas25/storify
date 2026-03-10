@@ -2,12 +2,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Shield, HelpCircle, Globe } from "lucide-react";
+import { LogOut, User, Settings, Shield, HelpCircle, Globe, Handshake } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocation } from "wouter";
 
 export default function Profile() {
   const { user, logout, isLoggingOut, isLoading } = useAuth();
   const { t, locale, setLocale } = useTranslation();
+  const [, setLocation] = useLocation();
 
   if (isLoading) {
     return (
@@ -60,6 +62,16 @@ export default function Profile() {
         <p className="text-muted-foreground md:text-lg">{user.email}</p>
         
         <div className="w-full max-w-md mt-12 space-y-3 md:space-y-4">
+          {/* Partner Button */}
+          <Button
+            variant="outline"
+            className="w-full justify-start h-14 md:h-16 text-base md:text-lg font-normal rounded-xl bg-gradient-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 border-primary/20 transition-all hover:scale-[1.01] hover:shadow-sm"
+            onClick={() => setLocation("/partner")}
+          >
+            <Handshake className="w-5 h-5 md:w-6 md:h-6 mr-3 text-primary" />
+            Partner Program
+          </Button>
+
           {menuItems.map((item) => (
             <Button
               key={item.label}

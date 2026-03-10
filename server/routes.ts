@@ -6,9 +6,9 @@ import { api } from "@shared/routes";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./auth/index";
 import { setupGoogleAuth } from "./auth/google";
 import { z } from "zod";
-import { users, sessions, activityLogs } from "@db/schema";
+import { users, sessions, activityLogs, sfSysLog, subscriptions, paymentTransactions, referralCodes, books as booksTable } from "@db/schema";
 import { hashPassword, verifyPassword, generateSessionId } from "./auth";
-import { eq } from "drizzle-orm";
+import { eq, desc, sql, count, and, gte, lte } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { sendVerificationEmail } from "./email";
 import { listAudioChapters } from "./cos";
@@ -56,15 +56,32 @@ async function logActivity(
   metadata?: Record<string, any>
 ) {
   try {
-    await db.insert(activityLogs).values({
-      userId,
-      action,
-      resourceType: resourceType || null,
-      resourceId: resourceId || null,
-      metadata: metadata || null,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] || null,
-      userAgent: req.headers["user-agent"] || null,
-    });
+    const ip = req.ip || req.headers["x-forwarded-for"] || null;
+    const ua = req.headers["user-agent"] || null;
+    const sessionUser = (req.session as any)?.user;
+
+    await Promise.all([
+      db.insert(activityLogs).values({
+        userId,
+        action,
+        resourceType: resourceType || null,
+        resourceId: resourceId || null,
+        metadata: metadata || null,
+        ipAddress: ip,
+        userAgent: ua,
+      }),
+      db.insert(sfSysLog).values({
+        userId,
+        userEmail: sessionUser?.email || metadata?.email || null,
+        userName: sessionUser?.name || metadata?.name || null,
+        action,
+        resourceType: resourceType || null,
+        resourceId: resourceId || null,
+        metadata: metadata || null,
+        ipAddress: ip,
+        userAgent: ua,
+      }),
+    ]);
   } catch (err) {
     // Silent fail — activity logging should never break the app
     console.error("Activity log error:", err);
@@ -628,6 +645,39 @@ export async function registerRoutes(
         valid: false, 
         message: "Gagal memvalidasi kode referral" 
       });
+    }
+  });
+
+  // ============= PARTNER ROUTES =============
+
+  // Register as partner (creates referral code with 10% commission)
+  app.post('/api/partner/register', isAuthenticated, async (req: any, res) => {
+    try {
+      const { registerAsPartner } = await import("./referral");
+      const result = await registerAsPartner(req.user.id);
+
+      logActivity(req, req.user.id, "partner_register", "partner", undefined, {
+        code: result.code,
+        commissionPercent: result.commissionPercent,
+        isNew: result.isNew,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error registering as partner:", error);
+      res.status(500).json({ message: "Gagal mendaftar sebagai partner" });
+    }
+  });
+
+  // Get partner earnings
+  app.get('/api/partner/earnings', isAuthenticated, async (req: any, res) => {
+    try {
+      const { getPartnerEarnings } = await import("./referral");
+      const earnings = await getPartnerEarnings(req.user.id);
+      res.json(earnings);
+    } catch (error: any) {
+      console.error("Error getting partner earnings:", error);
+      res.status(500).json({ message: "Gagal mengambil data pendapatan" });
     }
   });
 
@@ -1383,8 +1433,6 @@ export async function registerRoutes(
       const limit = Math.min(Number(req.query.limit) || 50, 200);
       const offset = Number(req.query.offset) || 0;
 
-      const { desc } = await import("drizzle-orm");
-
       const logs = await db
         .select()
         .from(activityLogs)
@@ -1396,6 +1444,281 @@ export async function registerRoutes(
       res.json(logs);
     } catch (error) {
       console.error("Get activity logs error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ============================================
+  // ADMIN ROUTES
+  // ============================================
+
+  const ADMIN_EMAIL = "dimas.perceka@storify.asia";
+
+  // Admin login
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email dan password harus diisi" });
+      }
+
+      if (email !== ADMIN_EMAIL) {
+        return res.status(401).json({ message: "Akses ditolak" });
+      }
+
+      // Find user and verify password
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (!user || !user.password) {
+        return res.status(401).json({ message: "Akses ditolak" });
+      }
+
+      const valid = await verifyPassword(password, user.password);
+      if (!valid) {
+        return res.status(401).json({ message: "Password salah" });
+      }
+
+      // Set admin session
+      (req.session as any).adminAuthenticated = true;
+      (req.session as any).adminEmail = email;
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin auth middleware
+  function isAdmin(req: any, res: any, next: any) {
+    if ((req.session as any)?.adminAuthenticated && (req.session as any)?.adminEmail === ADMIN_EMAIL) {
+      return next();
+    }
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // Admin: check auth status
+  app.get("/api/admin/me", isAdmin, (_req, res) => {
+    res.json({ authenticated: true, email: ADMIN_EMAIL });
+  });
+
+  // Admin: logout
+  app.post("/api/admin/logout", (req, res) => {
+    (req.session as any).adminAuthenticated = false;
+    (req.session as any).adminEmail = null;
+    res.json({ success: true });
+  });
+
+  // Admin: Dashboard overview stats
+  app.get("/api/admin/dashboard", isAdmin, async (_req, res) => {
+    try {
+      const [totalUsers] = await db.select({ count: count() }).from(users);
+      const [totalBooks] = await db.select({ count: count() }).from(booksTable);
+      const [activeSubscriptions] = await db
+        .select({ count: count() })
+        .from(subscriptions)
+        .where(eq(subscriptions.status, "active"));
+      const [totalTransactions] = await db.select({ count: count() }).from(paymentTransactions);
+      const [paidTransactions] = await db
+        .select({ count: count() })
+        .from(paymentTransactions)
+        .where(eq(paymentTransactions.status, "paid"));
+      const [totalRevenue] = await db
+        .select({ total: sql<number>`COALESCE(SUM(${paymentTransactions.amount}), 0)` })
+        .from(paymentTransactions)
+        .where(eq(paymentTransactions.status, "paid"));
+      const [totalPartners] = await db
+        .select({ count: count() })
+        .from(referralCodes)
+        .where(gte(referralCodes.commissionPercent, 10));
+
+      res.json({
+        totalUsers: totalUsers.count,
+        totalBooks: totalBooks.count,
+        activeSubscriptions: activeSubscriptions.count,
+        totalTransactions: totalTransactions.count,
+        paidTransactions: paidTransactions.count,
+        totalRevenue: totalRevenue.total,
+        totalPartners: totalPartners.count,
+      });
+    } catch (error) {
+      console.error("Admin dashboard error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: User list
+  app.get("/api/admin/users", isAdmin, async (req, res) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 50, 200);
+      const offset = Number(req.query.offset) || 0;
+
+      const userList = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          emailVerified: users.emailVerified,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const [total] = await db.select({ count: count() }).from(users);
+
+      res.json({ users: userList, total: total.count });
+    } catch (error) {
+      console.error("Admin users error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Activity logs from sf_sys_log
+  app.get("/api/admin/logs", isAdmin, async (req, res) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 100, 500);
+      const offset = Number(req.query.offset) || 0;
+      const action = req.query.action as string;
+      const userId = req.query.userId as string;
+
+      let query = db.select().from(sfSysLog).orderBy(desc(sfSysLog.createdAt)).limit(limit).offset(offset).$dynamic();
+
+      if (action) {
+        query = query.where(eq(sfSysLog.action, action));
+      }
+      if (userId) {
+        query = query.where(eq(sfSysLog.userId, userId));
+      }
+
+      const logs = await query;
+      const [total] = await db.select({ count: count() }).from(sfSysLog);
+
+      res.json({ logs, total: total.count });
+    } catch (error) {
+      console.error("Admin logs error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Action distribution (for charts)
+  app.get("/api/admin/stats/actions", isAdmin, async (_req, res) => {
+    try {
+      const actionStats = await db
+        .select({
+          action: sfSysLog.action,
+          count: count(),
+        })
+        .from(sfSysLog)
+        .groupBy(sfSysLog.action)
+        .orderBy(desc(count()));
+
+      res.json(actionStats);
+    } catch (error) {
+      console.error("Admin action stats error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Daily activity (last 30 days)
+  app.get("/api/admin/stats/daily", isAdmin, async (_req, res) => {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const dailyStats = await db
+        .select({
+          date: sql<string>`DATE(${sfSysLog.createdAt})`,
+          count: count(),
+        })
+        .from(sfSysLog)
+        .where(gte(sfSysLog.createdAt, thirtyDaysAgo))
+        .groupBy(sql`DATE(${sfSysLog.createdAt})`)
+        .orderBy(sql`DATE(${sfSysLog.createdAt})`);
+
+      res.json(dailyStats);
+    } catch (error) {
+      console.error("Admin daily stats error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Partner analytics
+  app.get("/api/admin/partners", isAdmin, async (_req, res) => {
+    try {
+      const partners = await db
+        .select({
+          id: referralCodes.id,
+          code: referralCodes.code,
+          userId: referralCodes.userId,
+          commissionPercent: referralCodes.commissionPercent,
+          discountPercent: referralCodes.discountPercent,
+          usageCount: referralCodes.usageCount,
+          isActive: referralCodes.isActive,
+          createdAt: referralCodes.createdAt,
+        })
+        .from(referralCodes)
+        .where(gte(referralCodes.commissionPercent, 10))
+        .orderBy(desc(referralCodes.createdAt));
+
+      // Get user details for each partner
+      const partnerDetails = await Promise.all(
+        partners.map(async (p) => {
+          const [user] = await db
+            .select({ name: users.name, email: users.email })
+            .from(users)
+            .where(eq(users.id, p.userId))
+            .limit(1);
+
+          // Get total earnings for this partner
+          const [earnings] = await db
+            .select({
+              totalEarnings: sql<number>`COALESCE(SUM(${paymentTransactions.referralCommissionAmount}), 0)`,
+              totalTransactions: count(),
+            })
+            .from(paymentTransactions)
+            .where(
+              and(
+                eq(paymentTransactions.referralOwnerId, p.userId),
+                eq(paymentTransactions.status, "paid")
+              )
+            );
+
+          return {
+            ...p,
+            userName: user?.name || "Unknown",
+            userEmail: user?.email || "Unknown",
+            totalEarnings: earnings?.totalEarnings || 0,
+            totalTransactions: earnings?.totalTransactions || 0,
+          };
+        })
+      );
+
+      res.json(partnerDetails);
+    } catch (error) {
+      console.error("Admin partners error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Recent transactions
+  app.get("/api/admin/transactions", isAdmin, async (req, res) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 50, 200);
+      const offset = Number(req.query.offset) || 0;
+
+      const txs = await db
+        .select()
+        .from(paymentTransactions)
+        .orderBy(desc(paymentTransactions.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const [total] = await db.select({ count: count() }).from(paymentTransactions);
+
+      res.json({ transactions: txs, total: total.count });
+    } catch (error) {
+      console.error("Admin transactions error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

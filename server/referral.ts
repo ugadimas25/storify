@@ -4,7 +4,7 @@
  */
 
 import { db } from "./db";
-import { referralCodes, users } from "@shared/schema";
+import { referralCodes, users, paymentTransactions } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 /**
@@ -252,4 +252,113 @@ function generateRandomString(length: number): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+/**
+ * Register user as a partner with 10% commission
+ * Creates or upgrades their referral code
+ */
+export async function registerAsPartner(userId: string): Promise<{
+  code: string;
+  commissionPercent: number;
+  isNew: boolean;
+}> {
+  const existing = await db.query.referralCodes.findFirst({
+    where: and(
+      eq(referralCodes.userId, userId),
+      eq(referralCodes.isActive, true)
+    ),
+  });
+
+  if (existing) {
+    // Upgrade commission to 10% if lower
+    if (existing.commissionPercent < 10) {
+      await db.update(referralCodes)
+        .set({ commissionPercent: 10 })
+        .where(eq(referralCodes.id, existing.id));
+    }
+    return { code: existing.code, commissionPercent: 10, isNew: false };
+  }
+
+  const randomPart = generateRandomString(6);
+  const code = `STORIFY-${randomPart}`.toUpperCase();
+
+  const codeExists = await db.query.referralCodes.findFirst({
+    where: eq(referralCodes.code, code),
+  });
+  if (codeExists) {
+    return registerAsPartner(userId);
+  }
+
+  await db.insert(referralCodes).values({
+    code,
+    userId,
+    discountPercent: 10,
+    commissionPercent: 10,
+    usageCount: 0,
+    isActive: true,
+  });
+
+  return { code, commissionPercent: 10, isNew: true };
+}
+
+/**
+ * Get partner earnings data
+ */
+export async function getPartnerEarnings(userId: string): Promise<{
+  totalEarnings: number;
+  pendingEarnings: number;
+  approvedEarnings: number;
+  paidEarnings: number;
+  totalTransactions: number;
+  transactions: Array<{
+    id: number;
+    amount: number;
+    commissionAmount: number;
+    commissionStatus: string | null;
+    referralCode: string | null;
+    paidAt: Date | null;
+    createdAt: Date | null;
+  }>;
+}> {
+  const txns = await db
+    .select({
+      id: paymentTransactions.id,
+      amount: paymentTransactions.amount,
+      commissionAmount: paymentTransactions.referralCommissionAmount,
+      commissionStatus: paymentTransactions.referralCommissionStatus,
+      referralCode: paymentTransactions.referralCode,
+      paidAt: paymentTransactions.paidAt,
+      createdAt: paymentTransactions.createdAt,
+    })
+    .from(paymentTransactions)
+    .where(
+      and(
+        eq(paymentTransactions.referralOwnerId, userId),
+        eq(paymentTransactions.status, "paid")
+      )
+    )
+    .orderBy(sql`${paymentTransactions.createdAt} DESC`);
+
+  let totalEarnings = 0;
+  let pendingEarnings = 0;
+  let approvedEarnings = 0;
+  let paidEarnings = 0;
+
+  for (const tx of txns) {
+    const commission = tx.commissionAmount || 0;
+    totalEarnings += commission;
+    if (tx.commissionStatus === "pending") pendingEarnings += commission;
+    else if (tx.commissionStatus === "approved") approvedEarnings += commission;
+    else if (tx.commissionStatus === "paid") paidEarnings += commission;
+  }
+
+  return {
+    totalEarnings,
+    pendingEarnings,
+    approvedEarnings,
+    paidEarnings,
+    totalTransactions: txns.length,
+    transactions: txns,
+  };
 }
