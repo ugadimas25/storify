@@ -5,7 +5,7 @@ import {
   type Book, type InsertBook, type Favorite, type PlaybackProgress,
   type SubscriptionPlan, type Subscription, type ListeningHistory, type PaymentTransaction
 } from "@shared/schema";
-import { eq, and, desc, like, ilike, notLike, sql, gte, or, isNull } from "drizzle-orm";
+import { eq, and, desc, like, ilike, notLike, sql, gte, or, isNull, ne } from "drizzle-orm";
 import { generateCoverUrl, generateAudioUrl, generatePdfUrl } from "./cos";
 
 // Listening limits
@@ -109,6 +109,12 @@ export class DatabaseStorage implements IStorage {
       .from(books);
 
     const conditions = [];
+
+    // Only show books that have audio (is_have_audio != 'no')
+    conditions.push(or(
+      isNull(books.isHaveAudio),
+      ne(books.isHaveAudio, 'no')
+    ));
 
     if (params?.search) {
       // Search in both titleFix and title, case-insensitive

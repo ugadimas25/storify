@@ -3,3 +3,9 @@
 > dotenv -e .env cross-env NODE_ENV=development tsx server/index.ts
 
 8:24:29 PM [express] serving on port 5000
+8:24:55 PM [express] POST /api/admin/login 200 in 5ms :: {"success":true}
+8:24:56 PM [express] GET /api/admin/partners 200 in 386ms :: [{"id":2,"code":"STORIFY-VF4A5V","userId":"2c3e524b-3790-4c1f-a057-72bf44ec8cc9","commissionPercent":10,"discountPercent":10,"usageCount":0,"isActive":true,"createdAt":"2026-03-10T18:40:39.647Z","userName":"kreto","userEmail":"kretocraft1995@gmail.com","totalEarnings":0,"totalTransactions":0}]
+8:29:02 PM [express] GET /api/admin/me 401 in 1ms :: {"message":"Unauthorized"}
+8:29:02 PM [express] GET /api/auth/user 401 in 1ms :: {"message":"Unauthorized"}
+[2m22.48.53[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/BookDetail.tsx, /src/pages/Explore.tsx, /src/pages/Home.tsx, /src/pages/Favorites.tsx[22m
+[2m22.48.58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/BookDetail.tsx, /src/pages/Explore.tsx, /src/pages/Home.tsx, /src/pages/Favorites.tsx[22m

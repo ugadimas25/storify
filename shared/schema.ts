@@ -47,6 +47,7 @@ export const books = pgTable("books_list", {
   category: text("category"),
   isFeatured: boolean("is_featured").default(false),
   isBestSeller: boolean("is_best_seller").default(false),
+  isHaveAudio: text("is_have_audio"), // 'no' = no audio available
 });
 
 export const favorites = pgTable("favorites", {
