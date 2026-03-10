@@ -5,6 +5,11 @@ const DOKU_SANDBOX_URL = "https://api-sandbox.doku.com";
 const DOKU_PRODUCTION_URL = "https://api.doku.com";
 
 function getDokuBaseUrl(): string {
+  const clientId = process.env.DOKU_CLIENT_ID || "";
+  // BRN- prefix indicates sandbox credentials — always use sandbox URL for them
+  if (clientId.startsWith("BRN-")) {
+    return DOKU_SANDBOX_URL;
+  }
   return process.env.NODE_ENV === "production"
     ? DOKU_PRODUCTION_URL
     : DOKU_SANDBOX_URL;
@@ -149,14 +154,13 @@ export async function createDokuCheckout(
     payment: {
       payment_due_date: params.paymentDueMinutes || 60, // Default 60 minutes
       payment_method_types: [
-        "QRIS",
-        "VIRTUAL_ACCOUNT_BCA",
         "VIRTUAL_ACCOUNT_BANK_MANDIRI",
         "VIRTUAL_ACCOUNT_BRI",
         "VIRTUAL_ACCOUNT_BNI",
         "VIRTUAL_ACCOUNT_DOKU",
-        "EMONEY_SHOPEE_PAY",
-        "EMONEY_OVO",
+        "VIRTUAL_ACCOUNT_BANK_PERMATA",
+        "VIRTUAL_ACCOUNT_BANK_DANAMON",
+        "VIRTUAL_ACCOUNT_BANK_CIMB",
       ],
     },
     customer: {
