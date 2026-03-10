@@ -1453,39 +1453,23 @@ export async function registerRoutes(
   // ============================================
 
   const ADMIN_EMAIL = "dimas.perceka@storify.asia";
+  const ADMIN_PASSWORD = "Adagajah55!!";
 
   // Admin login
-  app.post("/api/admin/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email dan password harus diisi" });
-      }
-
-      if (email !== ADMIN_EMAIL) {
-        return res.status(401).json({ message: "Akses ditolak" });
-      }
-
-      // Find user and verify password
-      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      if (!user || !user.password) {
-        return res.status(401).json({ message: "Akses ditolak" });
-      }
-
-      const valid = await verifyPassword(password, user.password);
-      if (!valid) {
-        return res.status(401).json({ message: "Password salah" });
-      }
-
-      // Set admin session
-      (req.session as any).adminAuthenticated = true;
-      (req.session as any).adminEmail = email;
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Admin login error:", error);
-      res.status(500).json({ message: "Internal server error" });
+  app.post("/api/admin/login", (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email dan password harus diisi" });
     }
+
+    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+      return res.status(401).json({ message: "Email atau password salah" });
+    }
+
+    (req.session as any).adminAuthenticated = true;
+    (req.session as any).adminEmail = email;
+
+    res.json({ success: true });
   });
 
   // Admin auth middleware
@@ -1670,26 +1654,34 @@ export async function registerRoutes(
             .where(eq(users.id, p.userId))
             .limit(1);
 
-          // Get total earnings for this partner
-          const [earnings] = await db
-            .select({
-              totalEarnings: sql<number>`COALESCE(SUM(${paymentTransactions.referralCommissionAmount}), 0)`,
-              totalTransactions: count(),
-            })
-            .from(paymentTransactions)
-            .where(
-              and(
-                eq(paymentTransactions.referralOwnerId, p.userId),
-                eq(paymentTransactions.status, "paid")
-              )
-            );
+          // Get total earnings via referral code (safer than owner ID join)
+          let totalEarnings = 0;
+          let totalTransactions = 0;
+          try {
+            const [earnings] = await db
+              .select({
+                totalEarnings: sql<number>`COALESCE(SUM(referral_commission_amount), 0)`,
+                totalTransactions: sql<number>`COUNT(*)`,
+              })
+              .from(paymentTransactions)
+              .where(
+                and(
+                  eq(paymentTransactions.referralCode, p.code),
+                  eq(paymentTransactions.status, "paid")
+                )
+              );
+            totalEarnings = Number(earnings?.totalEarnings) || 0;
+            totalTransactions = Number(earnings?.totalTransactions) || 0;
+          } catch (_e) {
+            // ignore earnings query errors
+          }
 
           return {
             ...p,
             userName: user?.name || "Unknown",
             userEmail: user?.email || "Unknown",
-            totalEarnings: earnings?.totalEarnings || 0,
-            totalTransactions: earnings?.totalTransactions || 0,
+            totalEarnings,
+            totalTransactions,
           };
         })
       );

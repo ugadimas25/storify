@@ -1,0 +1,5 @@
+
+> rest-express@1.0.0 dev
+> dotenv -e .env cross-env NODE_ENV=development tsx server/index.ts
+
+8:24:29 PM [express] serving on port 5000
