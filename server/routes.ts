@@ -1729,7 +1729,10 @@ export async function registerRoutes(
         { loc: `${BASE}/partner`, priority: "0.6", changefreq: "monthly" },
       ];
 
-      const bookUrls = books.map((b: any) => ({
+      // Deduplicate by ID before generating URLs
+      const uniqueBooks = Array.from(new Map(books.map((b: any) => [b.id, b])).values());
+
+      const bookUrls = uniqueBooks.map((b: any) => ({
         loc: `${BASE}/book/${b.id}`,
         priority: "0.8",
         changefreq: "monthly",
