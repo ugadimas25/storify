@@ -1715,6 +1715,63 @@ export async function registerRoutes(
     }
   });
 
+  // Sitemap
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const books = await storage.getBooks();
+      const BASE = "https://app.storify.asia";
+      const today = new Date().toISOString().split("T")[0];
+
+      const staticUrls = [
+        { loc: `${BASE}/`, priority: "1.0", changefreq: "daily" },
+        { loc: `${BASE}/explore`, priority: "0.9", changefreq: "daily" },
+        { loc: `${BASE}/subscription`, priority: "0.7", changefreq: "weekly" },
+        { loc: `${BASE}/partner`, priority: "0.6", changefreq: "monthly" },
+      ];
+
+      const bookUrls = books.map((b: any) => ({
+        loc: `${BASE}/book/${b.id}`,
+        priority: "0.8",
+        changefreq: "monthly",
+        lastmod: b.updatedAt ? new Date(b.updatedAt).toISOString().split("T")[0] : today,
+      }));
+
+      const allUrls = [...staticUrls, ...bookUrls];
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${allUrls.map(u => `  <url>
+    <loc>${u.loc}</loc>
+    ${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : `<lastmod>${today}</lastmod>`}
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join("\n")}
+</urlset>`;
+
+      res.header("Content-Type", "application/xml");
+      res.header("Cache-Control", "public, max-age=3600");
+      res.send(xml);
+    } catch (err) {
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  // Robots.txt
+  app.get("/robots.txt", (_req, res) => {
+    res.header("Content-Type", "text/plain");
+    res.send(
+`User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /favorites
+Disallow: /profile
+Disallow: /auth/
+
+Sitemap: https://app.storify.asia/sitemap.xml`
+    );
+  });
+
   // Seed Data
   await seedDatabase();
   
