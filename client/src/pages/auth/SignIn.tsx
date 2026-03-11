@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { GoogleLogin } from "@react-oauth/google";
+import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
+import { Capacitor } from "@capacitor/core";
 import { apiUrl } from "@/lib/api-config";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,19 +93,51 @@ export default function SignIn() {
     }
   };
 
-  // Google Login Handler
+  // Google Login Handler (web)
   const handleGoogleSuccess = async (credentialResponse: any) => {
-    setIsLoading(true);
+    await processGoogleLogin({ credential: credentialResponse.credential });
+  };
 
+  const handleGoogleError = () => {
+    console.error("Google login failed");
+    toast({
+      title: t("toast.loginFailed"),
+      description: t("toast.googleFailed"),
+      variant: "destructive",
+    });
+  };
+
+  // Native Google Sign-In (Capacitor Android)
+  const handleNativeGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await GoogleAuth.initialize({
+        clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        scopes: ["profile", "email"],
+        grantOfflineAccess: true,
+      });
+      const googleUser = await GoogleAuth.signIn();
+      const idToken = googleUser.authentication?.idToken;
+      if (!idToken) throw new Error("No ID token from Google");
+      await processGoogleLogin({ credential: idToken });
+    } catch (error: any) {
+      console.error("Native Google login error:", error);
+      toast({
+        title: t("toast.loginFailed"),
+        description: error.message || t("toast.googleFailed"),
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const processGoogleLogin = async (body: { credential: string }) => {
+    setIsLoading(true);
     try {
       const response = await fetch(apiUrl("/api/auth/google"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          credential: credentialResponse.credential,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: body.credential }),
         credentials: "include",
       });
 
@@ -114,7 +148,6 @@ export default function SignIn() {
 
       const data = await response.json();
 
-      // Invalidate auth cache so UI updates
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
       toast({
@@ -128,8 +161,8 @@ export default function SignIn() {
     } catch (error: any) {
       console.error("Google login error:", error);
       toast({
-      title: t("toast.loginFailed"),
-      description: error.message || t("toast.googleFailed"),
+        title: t("toast.loginFailed"),
+        description: error.message || t("toast.googleFailed"),
         variant: "destructive",
       });
     } finally {
@@ -252,7 +285,18 @@ export default function SignIn() {
 
           {/* Google Login Button */}
           <div className="flex justify-center">
-            {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+            {Capacitor.isNativePlatform() ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex items-center gap-2"
+                onClick={handleNativeGoogleSignIn}
+                disabled={isLoading}
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+                Masuk dengan Google
+              </Button>
+            ) : import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={handleGoogleError}
