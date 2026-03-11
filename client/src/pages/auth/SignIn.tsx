@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { GoogleLogin } from "@react-oauth/google";
-import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import { Capacitor } from "@capacitor/core";
 import { apiUrl } from "@/lib/api-config";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,6 +110,7 @@ export default function SignIn() {
   const handleNativeGoogleSignIn = async () => {
     setIsLoading(true);
     try {
+      const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
       await GoogleAuth.initialize({
         clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         scopes: ["profile", "email"],
