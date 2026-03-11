@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, List, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/api-config";
 
 interface AudioChapter {
   chapterNumber: number;
@@ -35,7 +36,7 @@ export function ChapterAudioPlayer({ bookId, bookTitle, onClose }: ChapterAudioP
     const fetchChapters = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/books/${bookId}/audio-chapters`);
+        const response = await fetch(apiUrl(`/api/books/${bookId}/audio-chapters`));
         
         if (!response.ok) {
           throw new Error('Failed to fetch audio chapters');
