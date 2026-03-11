@@ -110,12 +110,8 @@ export default function SignIn() {
   const handleNativeGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
-      await GoogleAuth.initialize({
-        clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        scopes: ["profile", "email"],
-        grantOfflineAccess: true,
-      });
+      const GoogleAuth = (window as any).Capacitor?.Plugins?.GoogleAuth;
+      if (!GoogleAuth) throw new Error("Google Auth plugin not available");
       const googleUser = await GoogleAuth.signIn();
       const idToken = googleUser.authentication?.idToken;
       if (!idToken) throw new Error("No ID token from Google");
