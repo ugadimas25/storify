@@ -3,11 +3,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/use-i18n";
+import { SEO } from "@/components/SEO";
 
 export default function NotFound() {
   const { t } = useTranslation();
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
+      <SEO title="Halaman Tidak Ditemukan" noindex />
       <Card className="w-full max-w-md border-0 shadow-none bg-transparent">
         <CardContent className="pt-6 text-center">
           <div className="flex justify-center mb-6">

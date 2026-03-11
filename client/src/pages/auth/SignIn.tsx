@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, RefreshCw } from "lucide-react";
 import { useTranslation } from "@/hooks/use-i18n";
+import { SEO } from "@/components/SEO";
 
 export default function SignIn() {
   const { t } = useTranslation();
@@ -150,6 +151,12 @@ export default function SignIn() {
       className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
       style={{ background: 'linear-gradient(160deg, #dce9f8 0%, #ecf5fc 50%, #cfe3f4 100%)' }}
     >
+      <SEO
+        title="Masuk"
+        description="Masuk ke akun Storify Anda untuk mendengarkan audiobook dan ringkasan buku."
+        canonical="/auth/signin"
+        noindex
+      />
       {/* Decorative ribbon background */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none select-none"

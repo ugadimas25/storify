@@ -10,6 +10,7 @@ import { Crown, Music, Headphones, Clock, CheckCircle, AlertCircle, QrCode, Cred
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-i18n";
+import { SEO } from "@/components/SEO";
 
 type PaymentTab = "qris" | "doku";
 
@@ -23,6 +24,11 @@ export default function Subscription() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <SEO
+        title="Langganan Premium"
+        description="Upgrade ke Storify Premium untuk akses tak terbatas ke semua audiobook dan ringkasan buku."
+        canonical="/subscription"
+      />
       <div className="container max-w-4xl mx-auto px-4 py-8 pb-24 space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">

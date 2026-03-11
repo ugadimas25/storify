@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, ArrowRight, RefreshCw } from "lucide-react";
 import { useTranslation } from "@/hooks/use-i18n";
+import { SEO } from "@/components/SEO";
 
 export default function SignUp() {
   const { t } = useTranslation();
@@ -132,6 +133,12 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#a1dab4]/20 via-white to-[#41b6c4]/10 px-4">
+      <SEO
+        title="Daftar"
+        description="Buat akun Storify gratis untuk mulai mendengarkan audiobook dan ringkasan buku Indonesia."
+        canonical="/auth/signup"
+        noindex
+      />
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>{t("auth.signUp")}</CardTitle>

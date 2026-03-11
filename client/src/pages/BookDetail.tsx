@@ -12,6 +12,7 @@ import { PDFReader } from "@/components/PDFReader";
 import { ChapterAudioPlayer } from "@/components/ChapterAudioPlayer";
 import { useState } from "react";
 import { useTranslation } from "@/hooks/use-i18n";
+import { SEO } from "@/components/SEO";
 
 export default function BookDetail() {
   const [, params] = useRoute("/book/:id");
@@ -50,6 +51,13 @@ export default function BookDetail() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
+      <SEO
+        title={book.title}
+        description={book.description || `Dengarkan ringkasan buku ${book.title} oleh ${book.author} di Storify.`}
+        canonical={`/book/${book.id}`}
+        ogImage={book.coverUrl}
+        ogType="book"
+      />
       {/* Dynamic Background Blur */}
       <div 
         className="fixed inset-0 z-0 opacity-20 pointer-events-none blur-3xl"

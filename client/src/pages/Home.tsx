@@ -1,6 +1,7 @@
 import { useBooks } from "@/hooks/use-books";
 import { useAuth } from "@/hooks/use-auth";
 import { useAudio } from "@/context/AudioContext";
+import { SEO } from "@/components/SEO";
 import { apiUrl } from "@/lib/api-config";
 import { BookCard } from "@/components/BookCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,6 +76,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      <SEO
+        title="Audiobook & Ringkasan Buku Indonesia"
+        description="Dengarkan ringkasan buku dan audiobook berbahasa Indonesia. Pelajari ide-ide terbaik dari buku populer dalam 15 menit."
+        canonical="/"
+      />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Background gradient */}

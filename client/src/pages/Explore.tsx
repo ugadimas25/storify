@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "@/hooks/use-i18n";
+import { SEO } from "@/components/SEO";
 
 export default function Explore() {
   const [search, setSearch] = useState("");
@@ -33,6 +34,11 @@ export default function Explore() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
+      <SEO
+        title="Jelajahi Audiobook Indonesia"
+        description="Temukan koleksi audiobook dan ringkasan buku terlengkap di Indonesia. Cari berdasarkan kategori, penulis, atau judul."
+        canonical="/explore"
+      />
       {/* Header - Fixed on mobile, sticky on desktop */}
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md pt-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
