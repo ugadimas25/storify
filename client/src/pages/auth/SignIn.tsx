@@ -170,15 +170,6 @@ export default function SignIn() {
     }
   };
 
-  const handleGoogleError = () => {
-    console.error("Google login failed");
-    toast({
-      title: t("toast.loginFailed"),
-      description: t("toast.googleFailed"),
-      variant: "destructive",
-    });
-  };
-
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
