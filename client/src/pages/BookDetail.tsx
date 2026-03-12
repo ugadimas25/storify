@@ -10,6 +10,7 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { PDFReader } from "@/components/PDFReader";
 import { ChapterAudioPlayer } from "@/components/ChapterAudioPlayer";
+import { PlayRipple } from "@/components/PlayRipple";
 import { useState } from "react";
 import { useTranslation } from "@/hooks/use-i18n";
 import { SEO } from "@/components/SEO";
@@ -101,6 +102,7 @@ export default function BookDetail() {
               alt={book.title} 
               className="w-full h-full object-cover"
             />
+            <PlayRipple playing={isPlayingCurrent} />
           </div>
 
           <div className="text-center space-y-2 mb-8 max-w-sm">

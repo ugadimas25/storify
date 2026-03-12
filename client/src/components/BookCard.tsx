@@ -3,6 +3,7 @@ import { Play, Pause, Clock, BookOpen } from "lucide-react";
 import { Link } from "wouter";
 import { useAudio } from "@/context/AudioContext";
 import { cn } from "@/lib/utils";
+import { PlayRipple } from "@/components/PlayRipple";
 
 interface BookCardProps {
   book: Book;
@@ -14,6 +15,13 @@ interface BookCardProps {
 export function BookCard({ book, variant = "vertical", className, showDuration = false }: BookCardProps) {
   const { currentBook, isPlaying, playBook } = useAudio();
   const isCurrent = currentBook?.id === book.id;
+  const isPlayingCurrent = isCurrent && isPlaying;
+
+  const handlePlay = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    playBook(book);
+  };
   
   if (variant === "horizontal") {
     return (
@@ -29,10 +37,7 @@ export function BookCard({ book, variant = "vertical", className, showDuration =
               }}
             />
             <button 
-              onClick={(e) => {
-                e.preventDefault();
-                playBook(book);
-              }}
+              onClick={handlePlay}
               className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
@@ -43,8 +48,7 @@ export function BookCard({ book, variant = "vertical", className, showDuration =
                 )}
               </div>
             </button>
-          </div>
-          <div className="flex flex-col justify-center min-w-0">
+            <PlayRipple playing={isPlayingCurrent} />
             <span className="text-xs font-medium text-primary mb-1">{book.category}</span>
             <h3 className="font-display font-bold text-lg leading-tight mb-1 truncate">{book.title}</h3>
             <p className="text-sm text-muted-foreground truncate">{book.author}</p>
@@ -82,10 +86,7 @@ export function BookCard({ book, variant = "vertical", className, showDuration =
           
           {/* Play button */}
           <button 
-            onClick={(e) => {
-              e.preventDefault();
-              playBook(book);
-            }}
+            onClick={handlePlay}
             className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-xl translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:bg-primary/90 hover:scale-110"
           >
             {isCurrent && isPlaying ? (
@@ -94,6 +95,9 @@ export function BookCard({ book, variant = "vertical", className, showDuration =
               <Play className="w-5 h-5 text-primary-foreground fill-current ml-0.5" />
             )}
           </button>
+
+          {/* Starburst animation on play */}
+          <PlayRipple playing={isPlayingCurrent} />
 
           {/* Info overlay on hover */}
           <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
@@ -137,10 +141,7 @@ export function BookCard({ book, variant = "vertical", className, showDuration =
         
         {/* Play button */}
         <button 
-          onClick={(e) => {
-            e.preventDefault();
-            playBook(book);
-          }}
+          onClick={handlePlay}
           className="absolute bottom-3 right-3 md:bottom-4 md:right-4 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
         >
           {isCurrent && isPlaying ? (
@@ -149,6 +150,9 @@ export function BookCard({ book, variant = "vertical", className, showDuration =
             <Play className="w-4 h-4 md:w-5 md:h-5 text-primary fill-current ml-0.5" />
           )}
         </button>
+
+        {/* Starburst animation on play */}
+        <PlayRipple playing={isPlayingCurrent} />
 
         {/* Duration badge */}
         {showDuration && book.duration > 0 && (

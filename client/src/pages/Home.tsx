@@ -11,6 +11,7 @@ import { Search, Play, ChevronLeft, ChevronRight, Headphones, BookOpen, Sparkles
 import { useRef, useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "@/hooks/use-i18n";
+import { SvgMorphBackground } from "@/components/SvgMorphBackground";
 import { useQuery } from "@tanstack/react-query";
 import { Book } from "@shared/schema";
 
@@ -84,13 +85,13 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#253494] via-[#2c7fb8] to-[#41b6c4]" />
-        {/* Decorative circles */}
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#a1dab4]/15 rounded-full blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-[#41b6c4]/20 rounded-full blur-2xl" />
-        <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-[#ffffcc]/10 rounded-full blur-2xl" />
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#253494] via-[#2c7fb8] to-[#41b6c4]" />
+        {/* Animated floating orbs */}
+        <div className="z-10">
+          <SvgMorphBackground />
+        </div>
 
-        <div className="relative px-6 pt-12 pb-8 lg:pt-16 lg:pb-12 max-w-7xl mx-auto">
+        <div className="relative z-20 px-6 pt-12 pb-8 lg:pt-16 lg:pb-12 max-w-7xl mx-auto">
           {user ? (
             /* Logged-in hero */
             <motion.div

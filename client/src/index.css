@@ -32,6 +32,11 @@
   --border: 150 18% 88%;
   --input: 150 18% 88%;
   --ring: 231 58% 36%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 231 58% 24%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 231 58% 24%;
   
   --radius: 0.75rem;
 }
@@ -58,6 +63,11 @@
   --border: 231 30% 16%;
   --input: 231 30% 16%;
   --ring: 189 55% 51%;
+
+  --card: 231 35% 12%;
+  --card-foreground: 60 100% 97%;
+  --popover: 231 35% 12%;
+  --popover-foreground: 60 100% 97%;
 }
 
 @layer base {

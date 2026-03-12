@@ -2,14 +2,22 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Shield, HelpCircle, Globe, Handshake } from "lucide-react";
+import { LogOut, User, Settings, Shield, HelpCircle, Globe, Handshake, Moon, Sun, ChevronDown, ChevronUp, Mail, Lock, Trash2, Info, MessageCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
+import { useTheme } from "@/hooks/use-theme";
+import { useState } from "react";
 
 export default function Profile() {
   const { user, logout, isLoggingOut, isLoading } = useAuth();
   const { t, locale, setLocale } = useTranslation();
   const [, setLocation] = useLocation();
+  const { isDark, setTheme } = useTheme();
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const toggleSection = (section: string) => {
+    setOpenSection(openSection === section ? null : section);
+  };
 
   if (isLoading) {
     return (
@@ -37,9 +45,9 @@ export default function Profile() {
   }
 
   const menuItems = [
-    { icon: Settings, label: t("profile.accountSettings") },
-    { icon: Shield, label: t("profile.privacy") },
-    { icon: HelpCircle, label: t("profile.help") },
+    { icon: Settings, label: t("profile.accountSettings"), key: "account" },
+    { icon: Shield, label: t("profile.privacy"), key: "privacy" },
+    { icon: HelpCircle, label: t("profile.help"), key: "help" },
   ];
 
   return (
@@ -73,14 +81,101 @@ export default function Profile() {
           </Button>
 
           {menuItems.map((item) => (
-            <Button
-              key={item.label}
-              variant="outline"
-              className="w-full justify-start h-14 md:h-16 text-base md:text-lg font-normal rounded-xl bg-card hover:bg-muted/50 border-border/50 transition-all hover:scale-[1.01] hover:shadow-sm"
-            >
-              <item.icon className="w-5 h-5 md:w-6 md:h-6 mr-3 text-muted-foreground" />
-              {item.label}
-            </Button>
+            <div key={item.key} className="space-y-0">
+              <Button
+                variant="outline"
+                className="w-full justify-between h-14 md:h-16 text-base md:text-lg font-normal rounded-xl bg-card hover:bg-muted/50 border-border/50 transition-all hover:scale-[1.01] hover:shadow-sm"
+                onClick={() => toggleSection(item.key)}
+              >
+                <span className="flex items-center">
+                  <item.icon className="w-5 h-5 md:w-6 md:h-6 mr-3 text-muted-foreground" />
+                  {item.label}
+                </span>
+                {openSection === item.key ? (
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                )}
+              </Button>
+
+              {/* Account Settings Panel */}
+              {item.key === "account" && openSection === "account" && (
+                <div className="mt-2 p-5 rounded-xl bg-card border border-border/50 space-y-5 animate-in slide-in-from-top-2 duration-200">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">{t("profile.editName")}</label>
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-foreground">{user.firstName} {user.lastName}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">{t("profile.email")}</label>
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-foreground">{user.email}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">{t("profile.changePassword")}</label>
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground text-sm">••••••••</span>
+                    </div>
+                  </div>
+                  <div className="pt-3 border-t border-border/50">
+                    <button className="flex items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                      {t("profile.deleteAccount")}
+                    </button>
+                    <p className="text-xs text-muted-foreground mt-1">{t("profile.deleteAccountWarning")}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Privacy Panel */}
+              {item.key === "privacy" && openSection === "privacy" && (
+                <div className="mt-2 p-5 rounded-xl bg-card border border-border/50 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                  <p className="text-sm text-muted-foreground">{t("profile.privacyDesc")}</p>
+                  {[
+                    { title: t("profile.dataCollected"), desc: t("profile.dataCollectedDesc") },
+                    { title: t("profile.dataSecurity"), desc: t("profile.dataSecurityDesc") },
+                    { title: t("profile.dataControl"), desc: t("profile.dataControlDesc") },
+                  ].map((item, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Info className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold">{item.title}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-6">{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Help Panel */}
+              {item.key === "help" && openSection === "help" && (
+                <div className="mt-2 p-5 rounded-xl bg-card border border-border/50 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                  <h4 className="text-sm font-semibold">{t("profile.faq")}</h4>
+                  {[
+                    { q: t("profile.faq1q"), a: t("profile.faq1a") },
+                    { q: t("profile.faq2q"), a: t("profile.faq2a") },
+                    { q: t("profile.faq3q"), a: t("profile.faq3a") },
+                  ].map((faq, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-muted/50">
+                      <p className="text-sm font-medium mb-1">{faq.q}</p>
+                      <p className="text-xs text-muted-foreground">{faq.a}</p>
+                    </div>
+                  ))}
+                  <div className="pt-3 border-t border-border/50">
+                    <h4 className="text-sm font-semibold mb-2">{t("profile.contactSupport")}</h4>
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                      <MessageCircle className="w-4 h-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">{t("profile.contactEmail")}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
 
           {/* Language Toggle */}
@@ -97,7 +192,24 @@ export default function Profile() {
               {locale === "id" ? "ID 🇮🇩" : "EN 🇬🇧"}
             </span>
           </Button>
-
+          {/* Dark Mode Toggle */}
+          <Button
+            variant="outline"
+            className="w-full justify-between h-14 md:h-16 text-base md:text-lg font-normal rounded-xl bg-card hover:bg-muted/50 border-border/50 transition-all hover:scale-[1.01] hover:shadow-sm"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+          >
+            <span className="flex items-center">
+              {isDark ? (
+                <Moon className="w-5 h-5 md:w-6 md:h-6 mr-3 text-muted-foreground" />
+              ) : (
+                <Sun className="w-5 h-5 md:w-6 md:h-6 mr-3 text-muted-foreground" />
+              )}
+              {t("profile.darkMode")}
+            </span>
+            <span className="text-sm font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full">
+              {isDark ? "ON" : "OFF"}
+            </span>
+          </Button>
           <div className="pt-8">
             <Button 
               variant="destructive" 
